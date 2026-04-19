@@ -1,8 +1,5 @@
-# 💇 Salon Appointment Booking System
+# 💇 SalonFusion-Unified-Microservices-Platform
 ## Microservices Architecture — Complete Documentation
-
-> **Interview-Ready Project** | Spring Boot · Keycloak · RabbitMQ · WebSocket · React · Docker · Razorpay
-
 ---
 
 ## 📋 Table of Contents
