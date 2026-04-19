@@ -1411,63 +1411,6 @@ npm start
   </div>
 </section>
 
-<!-- ===================== INTERVIEW ===================== -->
-<section class="section" id="interview">
-  <div class="section-header">
-    <div class="section-icon">🎯</div>
-    <h2>Interview Q&A — Talking Points</h2>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">Why microservices over monolith?</div>
-    <div class="qa-a">Each service (Booking, Payment, Notification) can be deployed, scaled, and maintained independently. If Notification Service crashes, bookings still work. With a monolith, one failure = everything fails. Also, different services can be scaled differently — Payment Service might need more instances than Category Service during peak hours.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">How do services communicate? Explain sync vs async.</div>
-    <div class="qa-a"><strong>Synchronous (Feign):</strong> When we need an immediate response — e.g. Booking Service needs user details before saving a booking. Uses Eureka for service discovery — no hardcoded URLs. If the called service is down, the request fails.<br><br><strong>Asynchronous (RabbitMQ):</strong> When we don't need an immediate response — e.g. after payment success, we publish to queues. Booking and Notification services react independently. System stays responsive even if one service is slow or temporarily down.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">Why Keycloak instead of custom JWT?</div>
-    <div class="qa-a">Keycloak provides battle-tested OAuth2/OIDC implementation with RBAC, token refresh, user management, admin API, and session management out of the box. Building custom JWT would take months and introduce security vulnerabilities. Keycloak also provides a JWK endpoint so Gateway can validate tokens locally without any DB calls — key for scalability.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">How does Gateway validate tokens WITHOUT calling Keycloak for every request?</div>
-    <div class="qa-a">Gateway uses Keycloak's JWK (JSON Web Key) endpoint to fetch the RSA public key ONCE and caches it. Every JWT is verified locally using RSA signature — zero network call per request. This is stateless validation. Config: <code>spring.security.oauth2.resource-server.jwt.jwk-set-uri</code> pointing to Keycloak's <code>/certs</code> endpoint. This is a critical performance and scalability advantage.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">RestTemplate vs OpenFeign — when to use which?</div>
-    <div class="qa-a"><strong>RestTemplate</strong> is used for Keycloak Admin API calls because Keycloak's token endpoint requires <code>Content-Type: application/x-www-form-urlencoded</code> (form data). OpenFeign's default encoder sends JSON, which fails. RestTemplate gives full manual control over headers and body encoding.<br><br><strong>OpenFeign</strong> is used for all inter-microservice calls because it's declarative (just an interface), auto-discovers services via Eureka (no hardcoded URLs), and requires zero boilerplate HTTP code. Spring generates the implementation automatically.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">How is slot conflict detection implemented?</div>
-    <div class="qa-a">The <code>isTimeSlotAvailable()</code> method fetches all existing bookings for the salon on that date. Then uses the interval overlap formula: <code>overlap = (newStart &lt; existingEnd) AND (newEnd &gt; existingStart)</code>. This handles all edge cases — same start, same end, contained within, overlapping left/right. Also validates that the slot falls within salon's open/close hours.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">How does RabbitMQ decouple Payment from Notification?</div>
-    <div class="qa-a">Payment Service calls <code>rabbitTemplate.convertAndSend("notification-queue", dto)</code> — fire-and-forget. It doesn't wait for Notification Service to respond. If Notification Service is down, messages queue up in RabbitMQ and are delivered when it comes back. Payment API responds to user immediately regardless. This is the core resilience pattern — side effects don't block the main flow.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">How does WebSocket real-time notification work end to end?</div>
-    <div class="qa-a">1. Notification Service has STOMP WebSocket server at <code>/ws</code>. 2. After RabbitMQ delivers event, <code>SimpMessagingTemplate.convertAndSend("/notification/user/{id}", dto)</code> pushes to topic. 3. React frontend subscribes to this topic using STOMP.js at app startup. 4. Browser receives notification instantly — no polling. Both customer AND salon owner get notified simultaneously from same payment event.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">What is Database-per-Service and why?</div>
-    <div class="qa-a">Each microservice has its own MySQL database. Services never directly query another service's DB. Data sharing happens only via REST (Feign) or events (RabbitMQ). Benefits: independent schema changes, independent deployments, no single DB bottleneck. Tradeoff: no cross-service JOIN queries — you join data in application code using Feign calls and stream processing.</div>
-  </div>
-
-  <div class="qa-block">
-    <div class="qa-q">How is the Salon Report generated?</div>
-    <div class="qa-a">No separate analytics service or complex SQL aggregation. Uses Java Streams on Booking data in memory: <code>bookings.stream().mapToDouble(Booking::getTotalPrice).sum()</code> for earnings, <code>.filter(b -> b.getStatus() == CANCELLED).count()</code> for cancellations. Clean, readable, sufficient for this scale. For large scale, you'd push to a proper analytics service via RabbitMQ.</div>
-  </div>
-</section>
 
 </div>
 </div>
