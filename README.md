@@ -1,101 +1,143 @@
-# 💇 Salon Appointment Booking System — Microservices Architecture
+# 💇 Salon Appointment Booking System
+## Microservices Architecture — Complete Documentation
 
-A **production-grade full-stack application** for booking salon appointments, built with a microservices architecture using Spring Boot, Keycloak, RabbitMQ, WebSocket, React, and Docker.
-
-> 🚀 **Interview-ready project** demonstrating enterprise-level design patterns: service discovery, event-driven architecture, centralized auth, real-time notifications, and distributed data management.
+> **Interview-Ready Project** | Spring Boot · Keycloak · RabbitMQ · WebSocket · React · Docker · Razorpay
 
 ---
 
 ## 📋 Table of Contents
 
-- [Architecture Overview](#architecture-overview)
-- [Tech Stack](#tech-stack)
-- [Microservices Breakdown](#microservices-breakdown)
-- [Key Design Concepts](#key-design-concepts)
-- [Authentication Flow — Keycloak + JWT](#authentication-flow--keycloak--jwt)
-- [Event-Driven Flow — RabbitMQ](#event-driven-flow--rabbitmq)
-- [Booking + Payment Lifecycle](#booking--payment-lifecycle)
-- [Inter-Service Communication — Feign Clients](#inter-service-communication--feign-clients)
-- [WebSocket Real-Time Notifications](#websocket-real-time-notifications)
-- [Database Design — Polyglot Persistence](#database-design--polyglot-persistence)
-- [API Reference](#api-reference)
-- [Local Setup Guide](#local-setup-guide)
-- [Environment Variables](#environment-variables)
-- [What I Learned — Interview Talking Points](#what-i-learned--interview-talking-points)
+1. [Project Overview](#project-overview)
+2. [Architecture Overview](#architecture-overview)
+3. [Tech Stack](#tech-stack)
+4. [Microservices Breakdown](#microservices-breakdown)
+5. [Authentication Flow — Keycloak + JWT](#authentication-flow--keycloak--jwt)
+6. [API Gateway & CORS](#api-gateway--cors)
+7. [Feign Client — Sync Communication](#feign-client--sync-communication)
+8. [RabbitMQ — Async Communication](#rabbitmq--async-communication)
+9. [Booking + Payment Lifecycle](#booking--payment-lifecycle)
+10. [WebSocket Real-Time Notifications](#websocket-real-time-notifications)
+11. [Email / Notification Flow](#email--notification-flow)
+12. [Complete API Reference](#complete-api-reference)
+13. [Database Design](#database-design)
+14. [Local Setup Guide (Step by Step)](#local-setup-guide-step-by-step)
+15. [Environment Variables](#environment-variables)
+16. [Interview Talking Points](#interview-talking-points)
+
+---
+
+## Project Overview
+
+A **production-grade full-stack Salon Appointment Booking system** built with **Microservices Architecture**. Users can browse salons, pick services, book time slots, and pay via Razorpay/Stripe — all in real time.
+
+```
+Key Features:
+✅ User registration + login via Keycloak (OAuth2 / OIDC)
+✅ Salon & service management for salon owners
+✅ Real-time slot conflict detection
+✅ Razorpay + Stripe payment gateway
+✅ Asynchronous booking confirmation via RabbitMQ
+✅ Real-time WebSocket push notifications (STOMP)
+✅ Role-based access: CUSTOMER vs SALON_OWNER
+✅ Centralized JWT auth via API Gateway
+✅ Database-per-service isolation
+```
 
 ---
 
 ## Architecture Overview
 
 ```
-                        ┌─────────────────┐
-                        │  React Frontend │
-                        │    Port: 3000   │
-                        └────────┬────────┘
-                                 │ HTTP / WebSocket
-                        ┌────────▼────────┐
-                        │   API Gateway   │  ← JWT validation via Keycloak JWK
-                        │   Port: 5000    │  ← Spring Cloud Gateway + CORS
-                        │   (Eureka LB)   │
-                        └────────┬────────┘
-                                 │ lb:// routing
-          ┌──────────────────────┼──────────────────────┐
-          │           ┌──────────┼──────────┐           │
-          ▼           ▼          ▼          ▼           ▼
-    User Service  Salon Svc  Category   Svc Offering  Booking Svc
-     Port 8081    Port 8082  Port 8083   Port 8084    Port 8085
-          │                                                │
-          │                              ┌────────────────┘
-          ▼                              ▼
-    Keycloak (8080)           Payment Service (8086)
-    [External IdP]                       │
-                                    ┌────┴────┐
-                                    ▼         ▼
-                             Razorpay/Stripe  RabbitMQ
-                                         ┌───┴────┐
-                                    booking-queue  notification-queue
-                                         │              │
-                                         ▼              ▼
-                                   Booking Svc    Notification Svc (8087)
-                                   [CONFIRMED]         │
-                                                       ▼
-                                                  WebSocket STOMP
-                                                  → React Frontend
+┌─────────────────────────────────────────────────────────────────┐
+│                     REACT FRONTEND (Port 3000)                  │
+│          Redux · TailwindCSS · MUI · Formik · STOMP.js          │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ HTTP REST + WebSocket (WS)
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│               API GATEWAY — Spring Cloud Gateway (Port 5000)    │
+│  • JWT validation via Keycloak JWK (stateless, no DB call)      │
+│  • CORS config (central — services have NO @CrossOrigin)        │
+│  • Load balancing via Eureka (lb://SERVICE-NAME)                │
+│  • Routes all /auth/**, /api/** to correct microservice         │
+└──────┬─────────┬──────────┬──────────┬──────────┬──────────────┘
+       │         │          │          │          │
+       ▼         ▼          ▼          ▼          ▼
+  ┌─────────┐ ┌───────┐ ┌────────┐ ┌───────┐ ┌─────────┐
+  │  User   │ │ Salon │ │Category│ │Service│ │ Booking │
+  │  :8081  │ │ :8082 │ │  :8083 │ │Offr.  │ │  :8085  │
+  │user_db  │ │salon_db│ │cat_db │ │:8084  │ │book_db  │
+  └────┬────┘ └───────┘ └────────┘ │svc_db │ └────┬────┘
+       │                            └───────┘      │
+       ▼                                           ▼
+  ┌─────────┐                              ┌──────────────┐
+  │Keycloak │                              │   Payment    │
+  │  :8080  │◄─── Admin REST API ──────── │    :8086     │
+  │  (IdP)  │     (RestTemplate)           │  payment_db  │
+  └─────────┘                              └──────┬───────┘
+                                                  │
+                                    ┌─────────────┼──────────────┐
+                                    ▼             ▼              ▼
+                               Razorpay        Stripe      RabbitMQ
+                                (India)     (International)  :5672
+                                                        ┌────┴─────┐
+                                                   booking-    notif-
+                                                    queue       queue
+                                                        │         │
+                                                        ▼         ▼
+                                                   Booking    Notification
+                                                   Service     Service
+                                                  (CONFIRM)    :8087
+                                                              notif_db
+                                                                  │
+                                                                  ▼
+                                                         WebSocket STOMP
+                                                       /notification/user/{id}
+                                                       /notification/salon/{id}
+                                                                  │
+                                                                  ▼
+                                                       React Frontend
+                                                     (Toast notification)
 ```
 
-**Each microservice has its own MySQL database** — true data isolation following the database-per-service pattern.
+**Eureka Server (Port 8070)** — Service registry. Every microservice registers here. Gateway uses `lb://` prefix for load-balanced routing.
 
 ---
 
 ## Tech Stack
 
 ### Backend
-| Technology | Purpose |
-|-----------|---------|
-| **Spring Boot 3.x** | Microservice framework |
-| **Spring Cloud Gateway** | API gateway with JWT auth |
-| **Netflix Eureka** | Service registry and discovery |
-| **OpenFeign** | Declarative HTTP client for inter-service calls |
-| **Keycloak 26.x** | Identity provider — OAuth2 / OIDC |
-| **Spring AMQP + RabbitMQ** | Asynchronous event-driven messaging |
-| **WebSocket + STOMP** | Real-time push notifications |
-| **MySQL** | Relational database (one per service) |
-| **Razorpay SDK** | Indian payment gateway |
-| **Stripe SDK** | International payment gateway |
-| **Lombok** | Boilerplate reduction |
+
+| Technology | Version | Purpose |
+|---|---|---|
+| **Spring Boot** | 3.x | Core microservice framework |
+| **Spring Cloud Gateway** | Latest | API gateway, JWT auth, CORS, routing |
+| **Netflix Eureka** | Latest | Service registry & discovery |
+| **OpenFeign** | Latest | Sync inter-service HTTP calls (declarative) |
+| **Keycloak** | 26.x | Identity provider — OAuth2 / OIDC / RBAC |
+| **Spring AMQP + RabbitMQ** | Latest | Async event-driven messaging |
+| **Spring WebSocket + STOMP** | Latest | Real-time push notifications |
+| **MySQL** | 8.x | Relational DB (one per service) |
+| **Razorpay SDK** | Latest | Indian payment gateway |
+| **Stripe SDK** | Latest | International payment gateway |
+| **RestTemplate** | Spring | HTTP client for Keycloak admin API calls |
+| **Lombok** | Latest | Boilerplate reduction |
 
 ### Frontend
+
 | Technology | Purpose |
-|-----------|---------|
+|---|---|
 | **React** | UI library |
 | **Redux** | Global state management |
 | **TailwindCSS** | Utility-first styling |
-| **Material-UI (MUI)** | Component library |
-| **Formik** | Form handling and validation |
+| **Material-UI (MUI)** | Pre-built UI components |
+| **Formik** | Form handling & validation |
+| **STOMP.js** | WebSocket client for real-time notifications |
 
 ### DevOps
+
 | Technology | Purpose |
-|-----------|---------|
+|---|---|
 | **Docker** | Containerization |
 | **Docker Compose** | Multi-container orchestration |
 
@@ -103,492 +145,134 @@ A **production-grade full-stack application** for booking salon appointments, bu
 
 ## Microservices Breakdown
 
-| Service | Port | Responsibility | DB |
-|---------|------|---------------|-----|
-| `eureka-server` | 8070 | Service registry | — |
-| `gateway-server` | 5000 | Routing, JWT validation, CORS | — |
-| `user-service` | 8081 | Auth (signup/login), user profiles, Keycloak integration | `user_db` |
-| `salon` | 8082 | Salon CRUD, city search, owner management | `salon_db` |
-| `category` | 8083 | Service categories (haircut, facial, etc.) | `category_db` |
-| `service-offering` | 8084 | Individual services with price + duration | `service_db` |
-| `booking` | 8085 | Booking lifecycle, slot conflict check | `booking_db` |
-| `payment` | 8086 | Payment links (Razorpay/Stripe), order tracking | `payment_db` |
-| `notifications` | 8087 | Notification storage + WebSocket push | `notification_db` |
-| `review` | 8088 | Reviews and ratings | `review_db` |
-
----
-
-## Key Design Concepts
-
-### 1. Database Per Service Pattern
-Each microservice owns its own MySQL schema. Services never share a database directly — they communicate only via REST (Feign) or events (RabbitMQ). This ensures loose coupling and independent deployability.
-
-### 2. API Gateway as Single Entry Point
-All frontend requests hit the Gateway on port 5000. The Gateway:
-- Validates JWT tokens using Keycloak's JWK endpoint (`/realms/master/protocol/openid-connect/certs`)
-- Routes requests to the correct service using **Eureka load balancing** (`lb://SERVICE-NAME`)
-- Handles CORS centrally (no individual service needs CORS config)
-
-### 3. Event-Driven Architecture (Async Communication)
-Payment completion triggers two asynchronous events via RabbitMQ instead of synchronous REST calls. This prevents tight coupling between Payment, Booking, and Notification services.
-
-### 4. RBAC — Role-Based Access Control
-Users are assigned either `CUSTOMER` or `SALON_OWNER` roles in Keycloak at signup. These roles are embedded in the JWT and checked at both the Gateway and service levels.
-
-### 5. RestTemplate vs Feign Clients
-- **Keycloak integration** uses `RestTemplate` (low-level HTTP) because Keycloak has a specific form-encoded OAuth2 protocol that Feign's default JSON encoder doesn't handle well.
-- **Inter-service calls** (User ↔ Booking ↔ Payment etc.) use **OpenFeign** — declarative, interface-based, auto-registered via Eureka.
+| Service | Port | DB | Responsibility |
+|---|---|---|---|
+| `eureka-server` | **8070** | — | Service registry. All services register here. |
+| `gateway-server` | **5000** | — | Single entry point. JWT auth, CORS, routing, load balancing. |
+| `user-service` | **8081** | `user_db` | Signup, login, token refresh. Keycloak integration via RestTemplate. |
+| `salon` | **8082** | `salon_db` | Salon CRUD, city search, owner management. |
+| `category` | **8083** | `category_db` | Service categories (haircut, facial, spa, etc.) |
+| `service-offering` | **8084** | `service_db` | Individual services — name, price, duration. |
+| `booking` | **8085** | `booking_db` | Booking creation, slot conflict check, status lifecycle. |
+| `payment` | **8086** | `payment_db` | Razorpay + Stripe payment link creation and verification. |
+| `notifications` | **8087** | `notif_db` | RabbitMQ consumer → saves notification → WebSocket push. |
+| `review` | **8088** | `review_db` | Ratings and reviews for salons. |
 
 ---
 
 ## Authentication Flow — Keycloak + JWT
 
+### What is Keycloak?
+Keycloak is an open-source Identity Provider (IdP). It manages users, passwords, roles, and tokens. We don't build JWT logic manually — Keycloak handles it using OAuth2/OIDC standard.
+
 ### Signup Flow
+
 ```
-Frontend → POST /auth/signup (email, password, role, phone)
-    ↓
-AuthServiceImpl
-    ↓
-KeycloakUserService (uses RestTemplate)
-    ├── 1. Get admin access token  → POST /realms/master/protocol/openid-connect/token
-    ├── 2. Create user in Keycloak → POST /admin/realms/master/users
-    ├── 3. Fetch Keycloak user ID  → GET  /admin/realms/master/users?username=xxx
-    └── 4. Assign role (CUSTOMER / SALON_OWNER) → POST /admin/realms/master/users/{id}/role-mappings
-    ↓
-Save user to local MySQL (UserRepository)
-    ↓
-Get JWT for new user → grant_type=password
-    ↓
-Return: { jwt, refresh_token, message }
+User fills signup form (name, email, password, role: CUSTOMER/SALON_OWNER)
+                            │
+                            ▼
+              POST /auth/signup  →  User Service (port 8081)
+                            │
+                            ▼
+              AuthServiceImpl.register()
+                            │
+                 ┌──────────▼──────────┐
+                 │  KeycloakUserService │  (uses RestTemplate — form-urlencoded)
+                 │                     │
+                 │  Step 1: Get admin   │
+                 │  token from Keycloak │──► POST /realms/master/protocol/
+                 │                     │        openid-connect/token
+                 │                     │    grant_type=client_credentials
+                 │  Step 2: Create user │──► POST /admin/realms/master/users
+                 │  in Keycloak         │    {username, email, password}
+                 │                     │
+                 │  Step 3: Get the     │──► GET /admin/realms/master/users
+                 │  new user's KC ID   │       ?username=xxx
+                 │                     │
+                 │  Step 4: Assign role │──► POST /admin/realms/master/users/
+                 │  CUSTOMER or        │        {id}/role-mappings/clients/{id}
+                 │  SALON_OWNER        │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+              Save user in local MySQL (user_db)
+                            │
+                            ▼
+              Get JWT for new user:
+              POST /token  grant_type=password
+                            │
+                            ▼
+              Return: { jwt, refresh_token } → Frontend
 ```
 
 ### Login Flow
+
 ```
-Frontend → POST /auth/login (email, password)
-    ↓
-KeycloakUserService.getAdminAccessToken(username, password, "password", null)
-    ↓
-Keycloak → access_token + refresh_token
-    ↓
-Return AuthResponse to frontend
+User enters email + password
+              │
+              ▼
+POST /auth/login → User Service
+              │
+              ▼
+KeycloakUserService.getToken(email, password, "password")
+              │
+              ▼  (RestTemplate — form-urlencoded POST)
+Keycloak Token Endpoint:
+POST /realms/master/protocol/openid-connect/token
+Body: client_id, client_secret, grant_type=password, username, password
+              │
+              ▼
+Keycloak returns: { access_token, refresh_token, expires_in }
+              │
+              ▼
+User Service returns AuthResponse to Frontend
 ```
 
-### Token Refresh
+### Token Refresh Flow
+
 ```
 GET /auth/access-token/refresh-token/{refreshToken}
-    ↓
-grant_type=refresh_token → new access_token
+              │
+              ▼
+POST /token  grant_type=refresh_token, refresh_token=xxx
+              │
+              ▼
+New access_token returned
 ```
 
-### How every subsequent request is secured
-```
-Frontend sends: Authorization: Bearer <jwt>
-    ↓
-API Gateway validates JWT using jwk-set-uri (Keycloak public keys)
-    ↓
-If valid → route to service with Authorization header
-    ↓
-Service calls UserFeignClient.getUserFromToken(jwt)
-    → /realms/master/protocol/openid-connect/userinfo
-    → Returns username, email, roles
-```
-
----
-
-## Event-Driven Flow — RabbitMQ
-
-### Why RabbitMQ here?
-When a user pays, we need to:
-1. Mark the booking as `CONFIRMED`
-2. Save a notification record
-3. Push a real-time notification to the user's browser
-
-Doing all three synchronously would couple Payment → Booking → Notification. If Notification Service is down, payment would fail. With RabbitMQ, Payment Service just fires-and-forgets — other services react independently.
-
-### Queue Configuration (Payment Service)
-```java
-@Bean public Queue bookingQueue()      { return new Queue("booking-queue"); }
-@Bean public Queue notificationQueue() { return new Queue("notification-queue"); }
-
-// Jackson2JsonMessageConverter handles Java object ↔ JSON serialization automatically
-@Bean
-public RabbitTemplate rabbitTemplate(ConnectionFactory cf, Jackson2JsonMessageConverter converter) {
-    RabbitTemplate rt = new RabbitTemplate(cf);
-    rt.setMessageConverter(converter);
-    return rt;
-}
-```
-
-### Event Flow After Successful Payment
-```
-Payment verified as "captured" (Razorpay status)
-    ↓
-BookingEventProducer.sentBookingUpdateEvent(paymentOrder)
-    → rabbitTemplate.convertAndSend("booking-queue", paymentOrder)
-    ↓
-[ASYNC] BookingEventConsumer @RabbitListener("booking-queue")
-    → bookingService.bookingSucess(paymentOrder)
-    → Booking status → CONFIRMED in MySQL
-
-NotificationEventProducer.sentNotificationEvent(bookingId, userId, salonId)
-    → rabbitTemplate.convertAndSend("notification-queue", notificationDTO)
-    ↓
-[ASYNC] NotificationEventConsumer @RabbitListener("notification-queue")
-    → notificationService.createNotification(notification)
-    → Saved to notification DB
-    → RealTimeCommunicationService.sendNotification(notificationDTO)
-    → SimpMessagingTemplate.convertAndSend("/notification/user/{userId}", dto)
-    → WebSocket pushes to React frontend instantly
-```
-
----
-
-## Booking + Payment Lifecycle
+### How Every API Request Is Secured
 
 ```
-1. User selects salon + services + time slot
-   ↓
-2. POST /api/bookings?salonId=X&paymentMethod=RAZORPAY
-   Body: { serviceIds: [...], startTime: "2025-01-25T10:00:00" }
-   ↓
-3. Booking Service:
-   ├── Feign: UserFeignClient  → validate JWT, get user details
-   ├── Feign: SalonFeignClient → get salon hours
-   └── Feign: ServiceOfferingFeignClient → get prices + durations
-   ↓
-4. Slot conflict check:
-   ├── Is time within salon open hours?
-   ├── Does it overlap any existing booking?
-   └── If conflict → throw Exception("slot not available")
-   ↓
-5. Calculate:
-   ├── totalPrice  = sum of all service prices
-   └── endTime     = startTime + sum of all service durations (minutes)
-   ↓
-6. Save Booking with status = PENDING
-   ↓
-7. Feign: PaymentFeignClient.createPaymentLink(bookingDTO, paymentMethod)
-   ↓
-8. Payment Service creates Razorpay PaymentLink
-   → Returns short_url to frontend
-   ↓
-9. User redirected to Razorpay payment page
-   ↓
-10. After payment → callback_url: localhost:3000/payment-success/{orderId}
-    ↓
-11. Frontend calls: PATCH /api/payments/proceed?paymentId=xxx&paymentLinkId=yyy
-    ↓
-12. Payment Service verifies via Razorpay SDK → status = "captured"
-    ↓
-13. Publish to RabbitMQ:
-    ├── booking-queue   → Booking status: PENDING → CONFIRMED
-    └── notification-queue → WebSocket push to user + salon owner
+Frontend sends:  Authorization: Bearer <access_token>
+                             │
+                             ▼
+              API Gateway (port 5000)
+              Validates JWT using Keycloak's public key:
+              jwk-set-uri: /realms/master/protocol/openid-connect/certs
+              (No call to Keycloak per request — public key is cached!)
+                             │
+              ┌──── Valid ───┤
+              │              │
+              ▼              ▼
+     Route to service    Reject 401
+              │
+              ▼
+Service receives request WITH Authorization header
+Service calls: UserFeignClient.getUserFromToken(jwt)
+  → GET /api/users/profile  (User Service)
+  → User Service calls: /realms/master/protocol/openid-connect/userinfo
+  → Returns: { username, email, roles }
+              │
+              ▼
+Service uses user details for business logic
 ```
 
----
+**Why RestTemplate for Keycloak and NOT Feign?**
 
-## Inter-Service Communication — Feign Clients
-
-OpenFeign creates HTTP clients from interface definitions. Service discovery via Eureka means no hardcoded URLs.
+Keycloak token endpoints require `Content-Type: application/x-www-form-urlencoded`. OpenFeign's default encoder sends JSON. RestTemplate allows explicit control of content-type headers, which is required here.
 
 ```java
-// Example: Booking Service calling User Service
-@FeignClient(name = "USER", url = "${USER_SERVICE_URL:}")
-public interface UserFeignClient {
-    @GetMapping("/api/users/profile")
-    ResponseEntity<UserDTO> getUserFromToken(@RequestHeader("Authorization") String jwt);
-
-    @GetMapping("/api/users/{userId}")
-    ResponseEntity<UserDTO> getUserById(@PathVariable Long userId);
-}
-```
-
-### Feign Client Map
-| Service | Calls |
-|---------|-------|
-| Booking | UserFeign, SalonFeign, ServiceOfferingFeign, PaymentFeign |
-| Payment | UserFeign |
-| Category | UserFeign, SalonFeign |
-| ServiceOffering | SalonFeign, CategoryFeign |
-| Notification | BookingFeign |
-| Review | UserFeign, SalonFeign |
-
----
-
-## WebSocket Real-Time Notifications
-
-```java
-// Notification Service — RealTimeCommunicationService.java
-@Component
-public class RealTimeCommunicationService {
-    private final SimpMessagingTemplate simpMessagingTemplate;
-
-    public void sendNotification(NotificationDTO notification) {
-        // Push to customer
-        simpMessagingTemplate.convertAndSend(
-            "/notification/user/" + notification.getUserId(), notification);
-
-        // Push to salon owner simultaneously
-        simpMessagingTemplate.convertAndSend(
-            "/notification/salon/" + notification.getSalonId(), notification);
-    }
-}
-```
-
-**React Frontend** subscribes to `/notification/user/{currentUserId}` via STOMP over WebSocket. When a booking is confirmed, both the customer and salon owner receive instant toast notifications without polling.
-
----
-
-## Database Design — Polyglot Persistence
-
-| Service | Key Entities |
-|---------|-------------|
-| user-service | `User` (id, email, role, fullName, phone, createdAt) |
-| salon | `Salon` (id, ownerId, name, city, openTime, closeTime) |
-| category | `Category` (id, salonId, name, description) |
-| service-offering | `ServiceOffering` (id, salonId, categoryId, name, price, duration) |
-| booking | `Booking` (id, customerId, salonId, serviceIds, startTime, endTime, totalPrice, status) |
-| payment | `PaymentOrder` (id, userId, bookingId, salonId, amount, paymentMethod, paymentLinkId, status) |
-| notifications | `Notification` (id, userId, salonId, bookingId, description, type, isRead) |
-
-**Booking status lifecycle:** `PENDING` → `CONFIRMED` (after payment) → `CANCELLED` (if cancelled)
-
-**PaymentOrder status:** `PENDING` → `SUCCESS` / `FAILED`
-
----
-
-## API Reference
-
-### Auth Endpoints (User Service)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/signup` | Register new user |
-| POST | `/auth/login` | Login with email + password |
-| GET | `/auth/access-token/refresh-token/{token}` | Refresh access token |
-
-### User Endpoints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users/profile` | Get profile from JWT |
-| GET | `/api/users/{userId}` | Get user by ID |
-
-### Salon Endpoints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/salons` | Create salon |
-| PUT | `/api/salons/{id}` | Update salon |
-| GET | `/api/salons` | Get all salons |
-| GET | `/api/salons/{id}` | Get salon by ID |
-| GET | `/api/salons/search?city=X` | Search by city |
-| GET | `/api/salons/owner` | Get owner's salon |
-
-### Booking Endpoints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/bookings` | Create booking + payment link |
-| GET | `/api/bookings/customer` | Customer's bookings |
-| GET | `/api/bookings/salon` | Salon's bookings |
-| GET | `/api/bookings/report` | Salon revenue report |
-| GET | `/api/bookings/slots/salon/{id}/date/{date}` | Booked slots by date |
-| PUT | `/api/bookings/{id}/status` | Update booking status |
-
-### Payment Endpoints
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/payments/create` | Create payment link |
-| GET | `/api/payments/{orderId}` | Get payment order |
-| PATCH | `/api/payments/proceed` | Process payment callback |
-
----
-
-## Local Setup Guide
-
-### Prerequisites
-- Java 17+
-- Node.js 18+
-- Docker Desktop
-- Maven
-- MySQL 8.x
-
-### Step 1 — Start Keycloak via Docker
-```bash
-docker run -p 8080:8080 \
-  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
-  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
-  quay.io/keycloak/keycloak:26.1.0 start-dev
-```
-
-### Step 2 — Configure Keycloak
-1. Open `http://localhost:8080` → Admin Console
-2. Create a new **client** → set Client ID: `salon-booking-client`
-3. Enable **Client Authentication** → copy the **Client Secret**
-4. Create **client roles**: `CUSTOMER` and `SALON_OWNER`
-5. Create an admin user → assign `realm-admin` role
-6. Update `user-service/src/main/resources/application.yml` with your `CLIENT_ID`, `CLIENT_SECRET`
-7. Increase **Access Token Lifespan** under Realm Settings → Tokens (e.g. 30 minutes)
-
-### Step 3 — Start Eureka Server
-```bash
-cd eurekaserver && mvn spring-boot:run
-```
-
-### Step 4 — Start All Microservices
-```bash
-# Start each in a separate terminal
-cd user-service    && mvn spring-boot:run
-cd salon           && mvn spring-boot:run
-cd category        && mvn spring-boot:run
-cd service-offering && mvn spring-boot:run
-cd booking         && mvn spring-boot:run
-cd payment         && mvn spring-boot:run
-cd notifications   && mvn spring-boot:run
-cd review          && mvn spring-boot:run
-cd gateway-server  && mvn spring-boot:run
-```
-
-### Step 5 — Start Frontend
-```bash
-cd frontend
-npm install
-npm start
-```
-Frontend runs at `http://localhost:3000`
-
-### Docker Compose (Optional)
-```bash
-cd docker-compose
-docker-compose up -d
-```
-
----
-
-## Environment Variables
-
-### user-service `application.yml`
-```yaml
-keycloak:
-  client-id: salon-booking-client
-  client-secret: <your-keycloak-client-secret>
-  admin-username: admin@gmail.com
-  admin-password: admin
-  base-url: http://localhost:8080
-```
-
-### payment `application.yml`
-```yaml
-razorpay:
-  api:
-    key: <your-razorpay-key-id>
-    secret: <your-razorpay-secret>
-stripe:
-  api:
-    key: <your-stripe-secret-key>
-```
-
----
-
-## What I Learned — Interview Talking Points
-
-### Microservices Design Decisions
-
-**Q: Why microservices over monolith?**
-Each service (Booking, Payment, Notification) can be deployed, scaled, and maintained independently. If the Notification Service goes down, bookings still work. With a monolith, a single failure could take everything down.
-
-**Q: How do services communicate?**
-Two patterns are used:
-- **Synchronous (Feign)**: When we need an immediate response — e.g. Booking Service needs user details to create a booking. Uses Eureka for service discovery so no hardcoded URLs.
-- **Asynchronous (RabbitMQ)**: When we don't need an immediate response — e.g. after payment success, we publish to queues. Booking Service and Notification Service react independently. This makes the system resilient.
-
-**Q: Why Keycloak instead of building custom JWT?**
-Keycloak provides battle-tested OAuth2/OIDC implementation with RBAC, token refresh, user management, and admin APIs out of the box. Building this custom would take months and introduce security vulnerabilities.
-
-**Q: How does the Gateway validate tokens without calling User Service for every request?**
-The Gateway uses Keycloak's JWK (JSON Web Key) endpoint to fetch Keycloak's public key and verifies the JWT signature locally. No network call needed per request — this is stateless validation. The config is:
-```yaml
-spring.security.oauth2.resource-server.jwt.jwk-set-uri: 
-  http://localhost:8080/realms/master/protocol/openid-connect/certs
-```
-
-**Q: What is RestTemplate used for vs Feign?**
-RestTemplate is used specifically for Keycloak communication because Keycloak's OAuth2 token endpoint uses `application/x-www-form-urlencoded` (form data), not JSON. OpenFeign's default encoder sends JSON. RestTemplate gives full control over headers and body encoding for this specific case.
-
-**Q: How does WebSocket work here?**
-The Notification Service uses Spring WebSocket with STOMP protocol. After RabbitMQ delivers an event, `SimpMessagingTemplate.convertAndSend()` pushes to topic `/notification/user/{id}`. The React frontend subscribes to this topic using the STOMP.js library. This enables true real-time push without polling.
-
-**Q: How is slot conflict handled?**
-The `isTimeSlotAvailable()` method in BookingServiceImpl fetches all existing bookings for the salon, then checks if any existing booking's time range overlaps with the requested slot using interval overlap logic:
-```
-overlap = (newStart < existingEnd) AND (newEnd > existingStart)
-```
-Also validates that the slot falls within the salon's open/close hours.
-
-**Q: How is the SalonReport generated?**
-The `getSalonReport()` method aggregates directly from the Booking table using Java streams — total earnings (sum of totalPrice), total bookings (count), cancelled bookings (filter by status), and total refunds (sum of cancelled prices). No separate analytics service needed for this scale.
-
----
-
-## Project Structure
-
-```
-backend (microservices)/
-├── eurekaserver/          ← Service registry (port 8070)
-├── gateway-server/        ← API Gateway (port 5000)
-├── user-service/          ← Auth + Keycloak (port 8081)
-├── salon/                 ← Salon management (port 8082)
-├── category/              ← Service categories (port 8083)
-├── service-offering/      ← Pricing + services (port 8084)
-├── booking/               ← Booking + slots (port 8085)
-├── payment/               ← Razorpay + Stripe (port 8086)
-├── notifications/         ← RabbitMQ consumer + WebSocket (port 8087)
-├── review/                ← Ratings (port 8088)
-└── docker-compose/        ← Docker Compose config
-
-frontend/
-├── src/
-│   ├── components/        ← React components
-│   ├── redux/             ← Redux store + slices
-│   └── pages/             ← Route-level pages
-```
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit changes: `git commit -m "feat: add your feature"`
-4. Push: `git push origin feature/your-feature`
-5. Open a Pull Request
-
----
-
-## License
-
-This project is for educational purposes. Feel free to use it as a reference for your own microservices projects.
-
----
-
-*Built with ❤️ using Spring Boot, Keycloak, RabbitMQ, and React.*
-
----
-
-## RestTemplate vs OpenFeign — Detailed Comparison
-
-### Why Two Different HTTP Clients?
-
-This project uses **both** HTTP clients deliberately — each for a specific reason.
-
-| Aspect | RestTemplate | OpenFeign |
-|--------|-------------|-----------|
-| Style | Imperative — you write the HTTP call manually | Declarative — just define an interface |
-| Content-Type | Full control (form-urlencoded, JSON, multipart) | Defaults to JSON |
-| Service discovery | Manual URL construction | Auto via Eureka (`lb://SERVICE-NAME`) |
-| Used for | Keycloak Admin REST API calls | All inter-microservice calls |
-| Why chosen | Keycloak token endpoint requires `application/x-www-form-urlencoded` — Feign's JSON encoder can't do this | Clean, readable, no boilerplate, auto load-balanced |
-
-### RestTemplate — Keycloak Integration (Actual Code Pattern)
-```java
-// Form-encoded POST to Keycloak token endpoint
+// RestTemplate — Keycloak call pattern
 HttpHeaders headers = new HttpHeaders();
 headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -599,53 +283,73 @@ body.add("grant_type",    "password");
 body.add("username",      username);
 body.add("password",      password);
 
-HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-ResponseEntity<TokenResponse> response = restTemplate.exchange(TOKEN_URL, HttpMethod.POST, request, TokenResponse.class);
-```
-
-### OpenFeign — Inter-Service (Actual Code Pattern)
-```java
-@FeignClient(name = "USER")   // "USER" = Eureka service name
-public interface UserFeignClient {
-    @GetMapping("/api/users/profile")
-    ResponseEntity<UserDTO> getUserFromToken(@RequestHeader("Authorization") String jwt);
-
-    @GetMapping("/api/users/{userId}")
-    ResponseEntity<UserDTO> getUserById(@PathVariable Long userId);
-}
-// That's it. No implementation needed. Spring generates it.
+HttpEntity<MultiValueMap<String, String>> req = new HttpEntity<>(body, headers);
+ResponseEntity<TokenResponse> response =
+    restTemplate.exchange(TOKEN_URL, HttpMethod.POST, req, TokenResponse.class);
 ```
 
 ---
 
-## Eureka + Gateway — Service Discovery Deep Dive
+## API Gateway & CORS
 
-### How it Works
-1. Every microservice has this in `application.yml`:
-   ```yaml
-   eureka:
-     client:
-       serviceUrl:
-         defaultZone: http://localhost:8070/eureka/
-   ```
-2. On startup, each service **registers** itself with its name (e.g. `USER`, `BOOKING`) and IP:port
-3. Gateway also registers and **fetches the registry** from Eureka
-4. `lb://BOOKING` in gateway routes = "ask Eureka for BOOKING's address, then load-balance"
-5. Eureka expects **heartbeats every 30s** — if a service goes silent, it's removed from registry
+### Gateway Role
 
-### Gateway Route Table (from actual `application.yml`)
+The API Gateway (port 5000) is the **single entry point** for all frontend requests. It does 3 things:
+
+1. **JWT Validation** — verifies token signature using Keycloak's JWK set (stateless, no DB call)
+2. **Routing** — maps URL paths to microservices using Eureka service names
+3. **CORS** — one central config; individual services have zero CORS annotation
+
+### Route Table
+
 ```yaml
-routes:
-  - id: USER        uri: lb://USER        predicates: Path=/auth/**,/api/users/**
-  - id: SALON       uri: lb://SALON       predicates: Path=/api/salons/**
-  - id: CATEGORY    uri: lb://CATEGORY    predicates: Path=/api/categories/**
-  - id: BOOKING     uri: lb://BOOKING     predicates: Path=/api/bookings/**
-  - id: PAYMENT     uri: lb://PAYMENT     predicates: Path=/api/payments/**
-  - id: NOTIFICATION uri: lb://NOTIFICATION predicates: Path=/api/notifications/**
-  - id: REVIEW      uri: lb://REVIEW      predicates: Path=/api/reviews/**
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: USER
+          uri: lb://USER
+          predicates:
+            - Path=/auth/**, /api/users/**
+
+        - id: SALON
+          uri: lb://SALON
+          predicates:
+            - Path=/api/salons/**
+
+        - id: CATEGORY
+          uri: lb://CATEGORY
+          predicates:
+            - Path=/api/categories/**
+
+        - id: SERVICE_OFFERING
+          uri: lb://SERVICE-OFFERING
+          predicates:
+            - Path=/api/service-offering/**
+
+        - id: BOOKING
+          uri: lb://BOOKING
+          predicates:
+            - Path=/api/bookings/**
+
+        - id: PAYMENT
+          uri: lb://PAYMENT
+          predicates:
+            - Path=/api/payments/**
+
+        - id: NOTIFICATION
+          uri: lb://NOTIFICATION
+          predicates:
+            - Path=/api/notifications/**
+
+        - id: REVIEW
+          uri: lb://REVIEW
+          predicates:
+            - Path=/api/reviews/**
 ```
 
-### JWT Validation at Gateway (Stateless — No Extra Call Needed)
+### JWT Validation Config
+
 ```yaml
 spring:
   security:
@@ -654,84 +358,1029 @@ spring:
         jwt:
           jwk-set-uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
 ```
-Gateway fetches Keycloak's **public key** once and caches it. Every JWT is verified locally using RSA signature — no round-trip to Keycloak per request. This is a key performance optimization.
 
----
+Gateway fetches Keycloak's RSA **public key once** and caches it. Every JWT is verified **locally** — no round-trip to Keycloak per request. Key performance advantage.
 
-## Good Engineering Concepts Used
+### CORS Configuration
 
-### 1. Separation of Concerns
-Each service owns a single domain boundary. Booking Service doesn't know how payment links are created — it just calls PaymentFeignClient and gets a URL back. This makes each service independently testable and deployable.
-
-### 2. Async Over Sync for Side Effects
-The booking confirmation and notification are **side effects** of payment — they don't need to happen synchronously. By pushing them to RabbitMQ queues, the payment API responds to the user immediately, and the other services process in the background. System feels faster, and failures in Notification Service don't affect payment.
-
-### 3. Single Entry Point — API Gateway
-All auth, routing, CORS, and load balancing happen at one place. Individual microservices don't need `@CrossOrigin` annotations or JWT parsing — they trust that the Gateway has already done it.
-
-### 4. DTO Pattern
-Every service exposes DTOs (Data Transfer Objects), never raw entity objects. This prevents leaking internal DB structure to consumers. Example: `BookingDTO` has `salonName` (fetched via Feign) but the `Booking` entity only has `salonId`.
-
-### 5. Slot Conflict Check Algorithm
-```
-overlap exists if: newStart < existingEnd AND newEnd > existingStart
-```
-This classic interval overlap formula handles all edge cases — same start, same end, contained within, overlapping left, overlapping right. Additionally validates against salon open/close hours.
-
-### 6. Dual Payment Gateway Support
-Payment Service supports both **Razorpay** (India-first, UPI/cards) and **Stripe** (international cards) via the same `paymentMethod` query param. The strategy pattern allows adding more gateways without touching booking or notification logic.
-
-### 7. Centralized CORS
-CORS is configured once in Gateway:
 ```yaml
-global-cors:
-  cors-configurations:
-    '[/**]':
-      allowedOrigins: ["http://localhost:3000", "https://salon-booking-three.vercel.app"]
-      allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]
-      allowedHeaders: ["*"]
-      allowCredentials: true
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "https://salon-booking-three.vercel.app"
+            allowedMethods: [GET, POST, PUT, DELETE, PATCH, OPTIONS]
+            allowedHeaders: ["*"]
+            allowCredentials: true
 ```
-`DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin` filter prevents duplicate CORS headers that would otherwise break browser preflight checks.
 
-### 8. Salon Report — Stream-Based Aggregation
+`DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin` filter prevents duplicate CORS headers that break browser preflight.
+
+### Eureka — Service Discovery
+
+```
+Every service registers at startup:
+  eureka.client.serviceUrl.defaultZone=http://localhost:8070/eureka/
+
+Gateway uses: uri: lb://BOOKING
+  → Asks Eureka: "Where is BOOKING running?"
+  → Eureka returns: 192.168.1.x:8085
+  → Gateway routes request there
+
+Heartbeat every 30 seconds.
+If a service stops → removed from registry after timeout.
+```
+
+---
+
+## Feign Client — Sync Communication
+
+**OpenFeign** = Declarative HTTP client. You write just an interface — Spring generates the implementation automatically.
+
 ```java
-// No SQL aggregation query needed — computed in Java streams
-Double totalEarnings = bookings.stream().mapToDouble(Booking::getTotalPrice).sum();
-Long   cancelled     = bookings.stream().filter(b -> b.getStatus() == CANCELLED).count();
-Double totalRefund   = cancelledBookings.stream().mapToDouble(Booking::getTotalPrice).sum();
+// Booking Service calling User Service
+@FeignClient(name = "USER", url = "${USER_SERVICE_URL:}")
+public interface UserFeignClient {
+
+    @GetMapping("/api/users/profile")
+    ResponseEntity<UserDTO> getUserFromToken(
+        @RequestHeader("Authorization") String jwt);
+
+    @GetMapping("/api/users/{userId}")
+    ResponseEntity<UserDTO> getUserById(@PathVariable Long userId);
+}
+
+// Usage in BookingServiceImpl:
+UserDTO user = userFeignClient.getUserFromToken(jwt).getBody();
+```
+
+No URL hardcoding. `lb://USER` means Eureka finds the User Service automatically, even if its IP changes.
+
+### Feign Client Dependency Map
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    FEIGN CLIENT CALLS                    │
+├──────────────────┬───────────────────────────────────────┤
+│  Service         │  Calls via Feign                      │
+├──────────────────┼───────────────────────────────────────┤
+│  Booking         │  UserFeign, SalonFeign,               │
+│                  │  ServiceOfferingFeign, PaymentFeign   │
+├──────────────────┼───────────────────────────────────────┤
+│  Payment         │  UserFeign                            │
+├──────────────────┼───────────────────────────────────────┤
+│  Category        │  UserFeign, SalonFeign                │
+├──────────────────┼───────────────────────────────────────┤
+│  ServiceOffering │  SalonFeign, CategoryFeign            │
+├──────────────────┼───────────────────────────────────────┤
+│  Notification    │  BookingFeign                         │
+├──────────────────┼───────────────────────────────────────┤
+│  Review          │  UserFeign, SalonFeign                │
+├──────────────────┼───────────────────────────────────────┤
+│  Salon           │  UserFeign                            │
+└──────────────────┴───────────────────────────────────────┘
+
+When to use Feign (Sync):
+✅ Immediate response needed
+✅ Request cannot proceed without the data
+Example: Booking needs user details before saving
+
+When NOT to use Feign (use RabbitMQ instead):
+❌ Side effects (notifications, confirmations)
+❌ Failure in downstream shouldn't fail current request
 ```
 
 ---
 
-## Salon Report Feature
+## RabbitMQ — Async Communication
 
-`GET /api/bookings/report` returns:
+### Why RabbitMQ?
 
-| Field | How Calculated |
-|-------|---------------|
-| `totalEarnings` | Sum of `totalPrice` for all bookings |
-| `totalBookings` | Count of all bookings |
-| `cancelledBookings` | Count where `status = CANCELLED` |
-| `totalRefund` | Sum of `totalPrice` for cancelled bookings |
+After payment is done, we need to:
+1. Mark booking as `CONFIRMED`
+2. Save a notification record
+3. Push WebSocket notification to user & salon owner
 
-This gives salon owners a dashboard overview of their business metrics.
+Doing all 3 synchronously via Feign would mean: if Notification Service is down → payment API fails. With RabbitMQ, Payment Service **fires-and-forgets** — other services react independently in the background.
+
+### Queue Configuration (Payment Service)
+
+```java
+@Configuration
+public class RabbitMQConfig {
+
+    @Bean
+    public Queue bookingQueue() {
+        return new Queue("booking-queue");
+    }
+
+    @Bean
+    public Queue notificationQueue() {
+        return new Queue("notification-queue");
+    }
+
+    @Bean
+    public Jackson2JsonMessageConverter messageConverter() {
+        return new Jackson2JsonMessageConverter();
+        // Handles Java Object ↔ JSON automatically
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(
+            ConnectionFactory cf,
+            Jackson2JsonMessageConverter converter) {
+        RabbitTemplate rt = new RabbitTemplate(cf);
+        rt.setMessageConverter(converter);
+        return rt;
+    }
+}
+```
+
+### Event Flow After Successful Payment
+
+```
+Razorpay confirms payment: status = "captured"
+                │
+                ▼
+Payment Service — PaymentServiceImpl.proceedPayment()
+                │
+        ┌───────┴────────┐
+        │                │
+        ▼                ▼
+BookingEventProducer  NotificationEventProducer
+        │                │
+        ▼                ▼
+rabbitTemplate          rabbitTemplate
+.convertAndSend(        .convertAndSend(
+  "booking-queue",        "notification-queue",
+  paymentOrder)           notificationDTO)
+        │                │
+   [ASYNC]           [ASYNC]
+        │                │
+        ▼                ▼
+BookingEvent         NotificationEvent
+Consumer             Consumer
+@RabbitListener      @RabbitListener
+("booking-queue")    ("notification-queue")
+        │                │
+        ▼                ▼
+bookingService       notificationService
+.bookingSuccess()    .createNotification()
+        │                │
+        ▼                ▼
+Booking status       Save to notif_db
+PENDING→CONFIRMED         │
+                          ▼
+                RealTimeCommunicationService
+                .sendNotification(dto)
+                          │
+                 ┌────────┴────────┐
+                 ▼                 ▼
+       SimpMessagingTemplate  SimpMessagingTemplate
+       .convertAndSend(       .convertAndSend(
+         "/notification/       "/notification/
+          user/{userId}",       salon/{salonId}",
+          dto)                  dto)
+                 │                 │
+                 ▼                 ▼
+          Customer sees        Salon owner sees
+          "Booking Confirmed"  "New booking!"
+          toast notification   toast notification
+```
+
+### Sync vs Async Summary
+
+| Communication | Technology | When | Example |
+|---|---|---|---|
+| **Synchronous** | OpenFeign | Need immediate response | Get user details, get salon info |
+| **Asynchronous** | RabbitMQ | Side effects, decoupled | Booking confirmed, send notification |
 
 ---
 
-## Deployment Notes
+## Booking + Payment Lifecycle
 
-### Docker Compose Services
-The `docker-compose/` folder orchestrates:
-- All Spring Boot microservices
-- MySQL (one container shared, or separate per service)
-- RabbitMQ with management console
-- Keycloak
+### Complete Flow (Step by Step)
 
-### Deployed URLs (from actual Gateway config)
-- Frontend prod: `https://salon-booking-three.vercel.app`
-- Payment callback: `http://localhost:3000/payment-success/{orderId}`
+```
+STEP 1:
+User selects: Salon + Services + Date + Time slot
+
+STEP 2:
+POST /api/bookings?salonId=5&paymentMethod=RAZORPAY
+Authorization: Bearer <jwt>
+Body: {
+  serviceIds: [1, 3, 7],
+  startTime: "2025-06-15T10:00:00"
+}
+
+STEP 3:
+Booking Service — BookingServiceImpl.createBooking()
+  │
+  ├── UserFeignClient.getUserFromToken(jwt)
+  │     → Get user details (id, name, email)
+  │
+  ├── SalonFeignClient.getSalonById(salonId)
+  │     → Get salon (openTime, closeTime, name)
+  │
+  └── ServiceOfferingFeignClient.getServicesByIds(serviceIds)
+        → Get each service (name, price, durationMinutes)
+
+STEP 4: SLOT CONFLICT CHECK
+  isWithinSalonHours = startTime >= salon.openTime
+                    && endTime   <= salon.closeTime
+
+  endTime = startTime + sum(all service durations in minutes)
+
+  For every existing booking in that salon on that date:
+    overlap = (newStart < existingEnd) AND (newEnd > existingStart)
+    if overlap → throw Exception("Slot not available")
+
+STEP 5: CALCULATE TOTALS
+  totalPrice = sum of all service prices
+  endTime    = startTime + total duration
+
+STEP 6:
+Save Booking entity:
+  status    = PENDING
+  customerId = user.id
+  salonId   = salon.id
+  serviceIds = [1,3,7]
+  startTime, endTime, totalPrice
+
+STEP 7:
+PaymentFeignClient.createPaymentLink(bookingDTO, "RAZORPAY")
+
+STEP 8:
+Payment Service — PaymentServiceImpl.createPaymentLink()
+  Creates Razorpay PaymentLink:
+  {
+    amount: totalPrice * 100,  ← Razorpay takes paise
+    currency: "INR",
+    description: "Salon Booking #bookingId",
+    callback_url: "http://localhost:3000/payment-success/{orderId}",
+    callback_method: "get"
+  }
+  Returns: { short_url: "https://rzp.io/l/abc123" }
+
+STEP 9:
+Booking Service returns PaymentLinkResponse to Frontend
+Frontend redirects user to Razorpay payment page
+
+STEP 10:
+User completes payment on Razorpay
+Razorpay redirects to: localhost:3000/payment-success/{orderId}
+  with params: ?razorpay_payment_id=xxx&razorpay_payment_link_id=yyy
+
+STEP 11:
+Frontend calls:
+PATCH /api/payments/proceed?paymentId=xxx&paymentLinkId=yyy
+
+STEP 12:
+Payment Service verifies via Razorpay SDK:
+  paymentLinkPayment.get(paymentLinkId)
+  → status == "captured"  → SUCCESS
+  → else                  → FAILED
+
+STEP 13 (if SUCCESS):
+Publish to RabbitMQ:
+  booking-queue      → BookingEventConsumer → status CONFIRMED
+  notification-queue → NotificationEventConsumer → WebSocket push
+```
+
+### Booking Status Lifecycle
+
+```
+  [Create Booking]
+        │
+        ▼
+    PENDING ─── Payment failed ──► FAILED
+        │
+        │ Payment success (RabbitMQ event)
+        ▼
+  CONFIRMED ─── User/Salon cancels ──► CANCELLED
+```
 
 ---
 
-*This README was generated from actual source code analysis. All code snippets are from the real implementation.*
+## WebSocket Real-Time Notifications
+
+### How WebSocket Works in This Project
+
+```
+Server Side (Notification Service):
+
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker("/notification");
+        registry.setApplicationDestinationPrefixes("/app");
+    }
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
+    }
+}
+
+// Push notification to user
+@Component
+public class RealTimeCommunicationService {
+    private final SimpMessagingTemplate messagingTemplate;
+
+    public void sendNotification(NotificationDTO notification) {
+        // Push to customer
+        messagingTemplate.convertAndSend(
+            "/notification/user/" + notification.getUserId(),
+            notification);
+
+        // Push to salon owner simultaneously
+        messagingTemplate.convertAndSend(
+            "/notification/salon/" + notification.getSalonId(),
+            notification);
+    }
+}
+```
+
+```
+Client Side (React — STOMP.js):
+
+const client = new Client({
+  brokerURL: 'ws://localhost:5000/ws',
+});
+
+client.onConnect = () => {
+  // Subscribe to personal notification channel
+  client.subscribe(
+    `/notification/user/${currentUserId}`,
+    (message) => {
+      const notification = JSON.parse(message.body);
+      showToast(notification.message);  // Real-time toast!
+    }
+  );
+};
+
+client.activate();
+```
+
+**Full notification flow:**
+Payment captured → RabbitMQ `notification-queue` → Notification Service consumer → save to DB → `SimpMessagingTemplate.convertAndSend()` → STOMP topic → React browser gets toast instantly.
+
+---
+
+## Email / Notification Flow
+
+```
+Notification Types:
+  - BOOKING_CONFIRMED  → Customer + Salon Owner
+  - BOOKING_CANCELLED  → Customer + Salon Owner
+  - PAYMENT_SUCCESS    → Customer
+
+Flow:
+Payment Service
+  │
+  ▼  (via RabbitMQ notification-queue)
+Notification Service Consumer
+  │
+  ├── Save Notification to notification_db
+  │   {userId, salonId, bookingId, type, description, isRead=false}
+  │
+  └── RealTimeCommunicationService.sendNotification()
+        │
+        ├── WebSocket → /notification/user/{userId}   (Customer)
+        └── WebSocket → /notification/salon/{salonId} (Salon Owner)
+
+Frontend:
+  - Shows toast popup instantly
+  - Notification bell count increments
+  - GET /api/notifications → fetch all notifications
+  - PUT /api/notifications/{id}/read → mark as read
+```
+
+---
+
+## Complete API Reference
+
+### 🔐 Auth Endpoints (User Service — Port 8081)
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/auth/signup` | None | Register new user (creates in Keycloak + local DB) |
+| `POST` | `/auth/login` | None | Login → returns JWT + refresh token |
+| `GET` | `/auth/access-token/refresh-token/{refreshToken}` | None | Get new access token using refresh token |
+
+**POST /auth/signup — Request Body:**
+```json
+{
+  "fullName": "Rahul Sharma",
+  "email": "rahul@gmail.com",
+  "password": "secret123",
+  "phone": "9876543210",
+  "role": "CUSTOMER"
+}
+```
+**Response:**
+```json
+{
+  "message": "User created successfully.",
+  "jwt": "eyJhbGciOiJSUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1..."
+}
+```
+
+---
+
+### 👤 User Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/users/profile` | JWT | Get profile from JWT token |
+| `GET` | `/api/users/{userId}` | JWT | Get user by ID |
+
+---
+
+### 💇 Salon Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/salons` | JWT (SALON_OWNER) | Create new salon |
+| `PUT` | `/api/salons/{salonId}` | JWT (SALON_OWNER) | Update salon details |
+| `GET` | `/api/salons` | None | Get all salons |
+| `GET` | `/api/salons/{salonId}` | None | Get salon by ID |
+| `GET` | `/api/salons/search?city=Lucknow` | None | Search salons by city |
+| `GET` | `/api/salons/owner` | JWT (SALON_OWNER) | Get salon owned by logged-in user |
+
+**POST /api/salons — Request Body:**
+```json
+{
+  "name": "Style Hub Salon",
+  "city": "Lucknow",
+  "address": "Hazratganj, Lucknow",
+  "openTime": "09:00:00",
+  "closeTime": "20:00:00",
+  "description": "Premium unisex salon"
+}
+```
+
+---
+
+### 🗂️ Category Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/categories` | None | Get all categories |
+| `GET` | `/api/categories/salon/{id}` | JWT | Get categories for a salon |
+| `GET` | `/api/categories/{id}` | None | Get category by ID |
+| `DELETE` | `/api/categories/{id}` | JWT (SALON_OWNER) | Delete category |
+| `POST` | `/api/categories/salon-owner` | JWT (SALON_OWNER) | Create category for salon |
+
+---
+
+### ✂️ Service Offering Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/service-offering/salon/{salonId}` | None | Get all services for a salon (optional `?categoryId=`) |
+| `GET` | `/api/service-offering/{serviceId}` | None | Get service by ID |
+| `GET` | `/api/service-offering/list/{ids}` | None | Get multiple services by IDs (comma-separated) |
+| `POST` | `/api/service-offering/salon-owner` | JWT (SALON_OWNER) | Create a new service |
+| `PUT` | `/api/service-offering/salon-owner/{serviceId}` | JWT (SALON_OWNER) | Update a service |
+
+**POST /api/service-offering/salon-owner — Request Body:**
+```json
+{
+  "name": "Haircut & Styling",
+  "description": "Professional cut with blow dry",
+  "price": 499.00,
+  "durationMinutes": 45,
+  "categoryId": 2
+}
+```
+
+---
+
+### 📅 Booking Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/bookings?salonId=X&paymentMethod=RAZORPAY` | JWT | Create booking + get payment link |
+| `GET` | `/api/bookings/customer` | JWT | Get all bookings for customer |
+| `GET` | `/api/bookings/salon` | JWT (SALON_OWNER) | Get all bookings for salon |
+| `GET` | `/api/bookings/report` | JWT (SALON_OWNER) | Get salon revenue report |
+| `GET` | `/api/bookings/slots/salon/{salonId}/date/{date}` | JWT | Get booked slots for a date |
+| `GET` | `/api/bookings/{bookingId}` | JWT | Get booking by ID |
+| `PUT` | `/api/bookings/{bookingId}/status?status=CANCELLED` | JWT | Update booking status |
+
+**POST /api/bookings — Request Body:**
+```json
+{
+  "serviceIds": [1, 3],
+  "startTime": "2025-06-20T10:00:00"
+}
+```
+**Response: PaymentLinkResponse**
+```json
+{
+  "paymentLinkId": "plink_AbCdEfGh",
+  "paymentLinkUrl": "https://rzp.io/l/abc123",
+  "amount": 998.00,
+  "currency": "INR",
+  "bookingId": 42
+}
+```
+
+**GET /api/bookings/report — Response:**
+```json
+{
+  "totalEarnings": 45000.00,
+  "totalBookings": 120,
+  "cancelledBookings": 8,
+  "totalRefund": 3200.00
+}
+```
+
+---
+
+### 💳 Payment Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/payments/create?paymentMethod=RAZORPAY` | JWT | Create Razorpay payment link |
+| `GET` | `/api/payments/{paymentOrderId}` | JWT | Get payment order by ID |
+| `PATCH` | `/api/payments/proceed?paymentId=xxx&paymentLinkId=yyy` | JWT | Verify & process payment callback |
+
+**PATCH /api/payments/proceed — Response:**
+```json
+true
+```
+(Returns `true` if payment verified successfully)
+
+---
+
+### 🔔 Notification Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/notifications` | JWT | Get all notifications for user |
+| `PUT` | `/api/notifications/{id}/read` | JWT | Mark notification as read |
+| `DELETE` | `/api/notifications/{id}` | JWT | Delete notification |
+
+---
+
+### ⭐ Review Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/reviews/salon/{salonId}` | JWT | Submit a review |
+| `GET` | `/api/reviews/salon/{salonId}` | None | Get reviews for a salon |
+
+---
+
+## Database Design
+
+Each service has its own isolated MySQL database — **Database-per-Service pattern**.
+
+```
+user_db (User Service)
+├── users
+│   ├── id (PK)
+│   ├── email (UNIQUE)
+│   ├── full_name
+│   ├── phone
+│   ├── role (CUSTOMER / SALON_OWNER)
+│   └── created_at
+
+salon_db (Salon Service)
+├── salons
+│   ├── id (PK)
+│   ├── owner_id (FK → user.id — stored, not joined!)
+│   ├── name
+│   ├── city
+│   ├── address
+│   ├── open_time
+│   └── close_time
+
+category_db (Category Service)
+├── categories
+│   ├── id (PK)
+│   ├── salon_id (FK → salon.id — stored, not joined!)
+│   ├── name
+│   └── description
+
+service_db (Service Offering Service)
+├── service_offerings
+│   ├── id (PK)
+│   ├── salon_id
+│   ├── category_id
+│   ├── name
+│   ├── price (DECIMAL)
+│   └── duration_minutes (INT)
+
+booking_db (Booking Service)
+├── bookings
+│   ├── id (PK)
+│   ├── customer_id
+│   ├── salon_id
+│   ├── service_ids (stored as JSON / comma-separated)
+│   ├── start_time
+│   ├── end_time
+│   ├── total_price
+│   └── status (PENDING / CONFIRMED / CANCELLED)
+
+payment_db (Payment Service)
+├── payment_orders
+│   ├── id (PK)
+│   ├── user_id
+│   ├── booking_id
+│   ├── salon_id
+│   ├── amount
+│   ├── payment_method (RAZORPAY / STRIPE)
+│   ├── payment_link_id
+│   └── status (PENDING / SUCCESS / FAILED)
+
+notification_db (Notification Service)
+├── notifications
+│   ├── id (PK)
+│   ├── user_id
+│   ├── salon_id
+│   ├── booking_id
+│   ├── type (BOOKING_CONFIRMED / CANCELLED / etc.)
+│   ├── description
+│   └── is_read (BOOLEAN)
+```
+
+**Important:** No service directly queries another service's database. Data sharing happens only via REST (Feign) or events (RabbitMQ). This is the core of microservices data isolation.
+
+---
+
+## Local Setup Guide (Step by Step)
+
+### Prerequisites
+
+```
+✅ Java 17+
+✅ Maven 3.8+
+✅ Node.js 18+
+✅ Docker Desktop (for Keycloak + RabbitMQ)
+✅ MySQL 8.x (local or Docker)
+✅ IntelliJ IDEA (recommended for backend)
+✅ VS Code (recommended for frontend)
+```
+
+### Step 1 — Start Keycloak via Docker
+
+```bash
+docker run -p 8080:8080 \
+  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:26.1.0 start-dev
+```
+
+### Step 2 — Configure Keycloak (Important!)
+
+Open `http://localhost:8080` → Login with admin/admin
+
+```
+a. Create a new Realm (or use "master")
+b. Create a Client:
+   - Client ID: salon-booking-client
+   - Enable: Client Authentication = ON
+   - Copy the generated Client Secret (from Credentials tab)
+
+c. Create Client Roles:
+   - CUSTOMER
+   - SALON_OWNER
+
+d. Create an admin user:
+   - Username: admin@gmail.com
+   - Password: admin (turn OFF "Temporary" option!)
+   - Assign role: realm-admin
+
+e. Increase Token Lifespan:
+   - Realm Settings → Tokens
+   - Access Token Lifespan: 30 minutes
+```
+
+### Step 3 — Update user-service Config
+
+Edit `user-service/src/main/resources/application.yml`:
+
+```yaml
+keycloak:
+  client-id: salon-booking-client
+  client-secret: <paste-your-client-secret-here>
+  admin-username: admin@gmail.com
+  admin-password: admin
+  base-url: http://localhost:8080
+```
+
+### Step 4 — Start RabbitMQ via Docker
+
+```bash
+docker run -d --name rabbitmq \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  rabbitmq:3-management
+```
+
+RabbitMQ Management UI: `http://localhost:15672` (guest/guest)
+
+### Step 5 — Create MySQL Databases
+
+```sql
+CREATE DATABASE user_db;
+CREATE DATABASE salon_db;
+CREATE DATABASE category_db;
+CREATE DATABASE service_db;
+CREATE DATABASE booking_db;
+CREATE DATABASE payment_db;
+CREATE DATABASE notification_db;
+CREATE DATABASE review_db;
+```
+
+### Step 6 — Add Razorpay Keys
+
+Edit `payment/src/main/resources/application.yml`:
+
+```yaml
+razorpay:
+  api:
+    key: <your-razorpay-key-id>
+    secret: <your-razorpay-secret>
+```
+
+Get keys from: https://dashboard.razorpay.com/app/keys (Test mode)
+
+### Step 7 — Start All Backend Services
+
+Open separate terminals for each:
+
+```bash
+# Terminal 1 — Eureka Server (start this FIRST)
+cd eurekaserver && mvn spring-boot:run
+
+# Terminal 2
+cd user-service && mvn spring-boot:run
+
+# Terminal 3
+cd salon && mvn spring-boot:run
+
+# Terminal 4
+cd category && mvn spring-boot:run
+
+# Terminal 5
+cd service-offering && mvn spring-boot:run
+
+# Terminal 6
+cd booking && mvn spring-boot:run
+
+# Terminal 7
+cd payment && mvn spring-boot:run
+
+# Terminal 8
+cd notifications && mvn spring-boot:run
+
+# Terminal 9
+cd review && mvn spring-boot:run
+
+# Terminal 10 — Gateway (start AFTER all services are up)
+cd gateway-server && mvn spring-boot:run
+```
+
+### Step 8 — Start Frontend
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+Frontend: `http://localhost:3000`
+
+### Docker Compose (Alternative — All-in-One)
+
+```bash
+cd docker-compose
+docker-compose up -d
+```
+
+### Verify Everything is Running
+
+| Service | URL | Expected |
+|---|---|---|
+| Eureka Dashboard | http://localhost:8070 | All services listed |
+| Keycloak Admin | http://localhost:8080 | Admin console |
+| RabbitMQ Management | http://localhost:15672 | Queue dashboard |
+| API Gateway | http://localhost:5000 | Routing active |
+| Frontend | http://localhost:3000 | App loads |
+
+---
+
+## Environment Variables
+
+### user-service/application.yml
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/user_db
+    username: root
+    password: yourpassword
+
+keycloak:
+  client-id: salon-booking-client
+  client-secret: <keycloak-client-secret>
+  admin-username: admin@gmail.com
+  admin-password: admin
+  base-url: http://localhost:8080
+
+server:
+  port: 8081
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+```
+
+### payment/application.yml
+
+```yaml
+razorpay:
+  api:
+    key: rzp_test_xxxxxxxxxx
+    secret: xxxxxxxxxxxxxxxxxx
+
+stripe:
+  api:
+    key: sk_test_xxxxxxxxxx
+
+server:
+  port: 8086
+```
+
+### gateway-server/application.yml
+
+```yaml
+spring:
+  security:
+    oauth2:
+      resource-server:
+        jwt:
+          jwk-set-uri: http://localhost:8080/realms/master/protocol/openid-connect/certs
+server:
+  port: 5000
+```
+
+---
+
+## Interview Talking Points
+
+### Q: Why Microservices over Monolith?
+
+Each service (Booking, Payment, Notification) can be **deployed, scaled, and maintained independently**. If Notification Service crashes, bookings still work. With a monolith, one failure = everything fails. Also, different services can be scaled differently — Payment Service might need more instances than Category Service.
+
+---
+
+### Q: How do services communicate?
+
+**Two patterns used:**
+
+**Synchronous (Feign):** When we need an immediate response — e.g. Booking Service needs user details before creating a booking. Uses Eureka for service discovery — no hardcoded URLs.
+
+**Asynchronous (RabbitMQ):** When we don't need an immediate response — e.g. after payment success, we publish to queues. Booking and Notification services react independently. System stays responsive even if one service is slow.
+
+---
+
+### Q: Why Keycloak instead of custom JWT?
+
+Keycloak provides battle-tested OAuth2/OIDC implementation with RBAC, token refresh, user management, admin API, and session management out of the box. Building this custom would take months and likely introduce security vulnerabilities. Keycloak also provides a JWK endpoint so Gateway can validate tokens locally without DB calls.
+
+---
+
+### Q: How does Gateway validate tokens without calling User Service for every request?
+
+Gateway uses Keycloak's JWK (JSON Web Key) endpoint to fetch the RSA **public key** once and **caches it**. Every JWT is verified locally using RSA signature — zero network call per request. This is stateless validation — a key performance and scalability advantage.
+
+---
+
+### Q: RestTemplate vs OpenFeign — when to use which?
+
+**RestTemplate** is used for Keycloak Admin API calls because Keycloak's token endpoint requires `Content-Type: application/x-www-form-urlencoded` (form data). OpenFeign's default encoder sends JSON, which would fail. RestTemplate gives full control over content-type and body encoding.
+
+**OpenFeign** is used for all inter-microservice calls because it's declarative (just an interface), auto-discovers services via Eureka (no hardcoded URLs), and requires zero boilerplate HTTP code.
+
+---
+
+### Q: How is slot conflict handled?
+
+`isTimeSlotAvailable()` in BookingServiceImpl fetches all existing bookings for the salon, then uses **interval overlap formula**:
+
+```
+overlap exists if: (newStart < existingEnd) AND (newEnd > existingStart)
+```
+
+This handles all edge cases: same start, same end, contained within, overlapping left/right. Also validates that the slot falls within salon's open/close hours.
+
+---
+
+### Q: How does RabbitMQ decouple Payment from Notification?
+
+Payment Service publishes to `notification-queue` using `RabbitTemplate.convertAndSend()` — a fire-and-forget call. It doesn't wait for Notification Service to respond. If Notification Service is down, messages queue up in RabbitMQ and are delivered when it comes back up. Payment API responds to user immediately regardless.
+
+---
+
+### Q: How does WebSocket real-time notification work?
+
+1. Notification Service has a STOMP WebSocket server at `/ws`
+2. After RabbitMQ delivers event, `SimpMessagingTemplate.convertAndSend("/notification/user/{id}", dto)` pushes to topic
+3. React frontend subscribes to this topic using STOMP.js at startup
+4. Browser receives notification instantly — no polling needed
+
+Both customer AND salon owner get notifications simultaneously from the same payment event.
+
+---
+
+### Q: What is Database-per-Service and why?
+
+Each microservice has its **own MySQL database**. Services never directly query another service's DB. Data sharing happens only via REST (Feign) or events (RabbitMQ). Benefits: independent schema changes, independent deployments, no single point of failure. The tradeoff is no cross-service JOIN queries — you join data in application code using Feign calls.
+
+---
+
+### Q: How is SalonReport generated?
+
+No separate analytics service or complex SQL aggregation query needed. `getSalonReport()` uses **Java Streams** on Booking data:
+
+```java
+Double totalEarnings = bookings.stream()
+    .mapToDouble(Booking::getTotalPrice).sum();
+
+Long cancelledCount = bookings.stream()
+    .filter(b -> b.getStatus() == CANCELLED).count();
+
+Double totalRefund = bookings.stream()
+    .filter(b -> b.getStatus() == CANCELLED)
+    .mapToDouble(Booking::getTotalPrice).sum();
+```
+
+Clean, readable, and sufficient for this scale.
+
+---
+
+## Project Structure
+
+```
+backend/
+├── eurekaserver/           ← Service registry (port 8070)
+│   └── src/main/java/
+│       └── EurekaServerApplication.java
+│
+├── gateway-server/         ← API Gateway (port 5000)
+│   └── src/main/resources/
+│       └── application.yml  (JWT config, routes, CORS)
+│
+├── user-service/           ← Auth + Keycloak (port 8081)
+│   └── src/main/java/
+│       ├── controller/AuthController.java
+│       ├── service/KeycloakUserService.java
+│       └── repository/UserRepository.java
+│
+├── salon/                  ← Salon management (port 8082)
+├── category/               ← Categories (port 8083)
+├── service-offering/       ← Services/pricing (port 8084)
+├── booking/                ← Booking + slots (port 8085)
+│   └── src/main/java/
+│       └── service/BookingServiceImpl.java  (conflict check logic)
+│
+├── payment/                ← Razorpay + Stripe (port 8086)
+│   └── src/main/java/
+│       ├── config/RabbitMQConfig.java
+│       └── producer/BookingEventProducer.java
+│
+├── notifications/          ← WebSocket + RabbitMQ consumer (port 8087)
+│   └── src/main/java/
+│       ├── consumer/NotificationEventConsumer.java
+│       └── service/RealTimeCommunicationService.java
+│
+├── review/                 ← Reviews (port 8088)
+└── docker-compose/         ← Docker Compose config
+
+frontend/
+└── src/
+    ├── components/         ← Reusable React components
+    ├── redux/              ← Store + slices (auth, salon, booking)
+    └── pages/              ← Route-level pages
+```
+
+---
+
+*Built with Spring Boot, Keycloak, RabbitMQ, WebSocket, React, and Razorpay.*
+*Architecture designed for scalability, resilience, and independent deployability.*

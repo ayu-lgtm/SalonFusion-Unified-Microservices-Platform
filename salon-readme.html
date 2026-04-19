@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salon Booking System — Microservices Documentation</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #161b27;
+    --bg3: #1e2533;
+    --border: rgba(255,255,255,0.08);
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #6366f1;
+    --accent2: #8b5cf6;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --teal: #14b8a6;
+    --pink: #ec4899;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* Header */
+  .hero {
+    background: linear-gradient(135deg, #1a0533 0%, #0d1b3e 50%, #051225 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; left: -40px; right: -40px; bottom: -40px;
+    background: radial-gradient(ellipse at 30% 50%, rgba(99,102,241,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 50%, rgba(139,92,246,0.1) 0%, transparent 60%);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(99,102,241,0.2);
+    border: 1px solid rgba(99,102,241,0.4);
+    color: #a5b4fc;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: 40px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe, #a5b4fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 700px;
+    margin: 0 auto 28px;
+    position: relative;
+  }
+  .tech-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    position: relative;
+  }
+  .pill {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .pill.hot { border-color: rgba(99,102,241,0.4); color: #a5b4fc; }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+  .main-content { padding: 48px 0; }
+
+  /* TOC */
+  .toc {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 48px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 32px;
+  }
+  .toc h3 {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .toc a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 3px 0;
+    display: block;
+    transition: color 0.15s;
+  }
+  .toc a:hover { color: #a5b4fc; }
+
+  /* Sections */
+  .section {
+    margin-bottom: 64px;
+    scroll-margin-top: 24px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-icon {
+    width: 36px; height: 36px;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+
+  /* Service cards */
+  .svc-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .svc-card .port {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: rgba(99,102,241,0.15);
+    color: #a5b4fc;
+    padding: 2px 8px;
+    border-radius: 4px;
+    float: right;
+  }
+  .svc-card h4 { font-size: 14px; margin-bottom: 4px; }
+  .svc-card p { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .svc-card .db-tag {
+    font-size: 10px;
+    background: rgba(16,185,129,0.1);
+    color: #6ee7b7;
+    border: 1px solid rgba(16,185,129,0.2);
+    padding: 1px 7px;
+    border-radius: 4px;
+    margin-top: 6px;
+    display: inline-block;
+  }
+
+  /* SVG diagrams */
+  .diagram-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 24px 0;
+    overflow-x: auto;
+  }
+  .diagram-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .diagram-label::before {
+    content: '';
+    display: inline-block;
+    width: 3px; height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  /* Code blocks */
+  pre {
+    background: #0a0e1a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.65;
+    font-family: var(--mono);
+    color: #c9d1d9;
+    margin: 16px 0;
+  }
+  code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(255,255,255,0.07);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #a5b4fc;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; margin: 16px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-family: var(--mono); font-size: 12px; color: #a5b4fc; }
+
+  /* Method badges */
+  .method {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+  .get { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+  .post { background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+  .put { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+  .patch { background: rgba(20,184,166,0.15); color: #5eead4; border: 1px solid rgba(20,184,166,0.3); }
+  .delete { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+  /* Steps */
+  .steps { display: flex; flex-direction: column; gap: 16px; }
+  .step {
+    display: flex;
+    gap: 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    background: rgba(99,102,241,0.2);
+    border: 1px solid rgba(99,102,241,0.4);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #a5b4fc;
+    flex-shrink: 0;
+  }
+  .step-content h4 { font-size: 14px; margin-bottom: 4px; }
+  .step-content p { font-size: 13px; color: var(--muted); }
+
+  /* Callouts */
+  .callout {
+    border-left: 3px solid;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .callout.info { border-color: var(--blue); background: rgba(59,130,246,0.08); }
+  .callout.tip { border-color: var(--green); background: rgba(16,185,129,0.08); }
+  .callout.warn { border-color: var(--amber); background: rgba(245,158,11,0.08); }
+  .callout strong { display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; }
+  .callout.info strong { color: #93c5fd; }
+  .callout.tip strong { color: #6ee7b7; }
+  .callout.warn strong { color: #fcd34d; }
+
+  /* Interview Q&A */
+  .qa-block {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .qa-q {
+    padding: 14px 20px;
+    background: rgba(99,102,241,0.08);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    color: #c7d2fe;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .qa-q::before { content: 'Q'; color: #6366f1; font-weight: 700; flex-shrink: 0; }
+  .qa-a {
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* Info grid */
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; }
+  .info-item {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .info-item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; }
+  .info-item .value { font-size: 20px; font-weight: 700; margin: 4px 0; color: #a5b4fc; }
+  .info-item .desc { font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Interview-Ready Project</div>
+  <h1>Salon Booking System</h1>
+  <p>Production-grade microservices architecture with Spring Boot, Keycloak, RabbitMQ, WebSocket, React, and Razorpay</p>
+  <div class="tech-pills">
+    <span class="pill hot">Spring Boot 3.x</span>
+    <span class="pill hot">Keycloak 26.x</span>
+    <span class="pill hot">RabbitMQ</span>
+    <span class="pill hot">WebSocket + STOMP</span>
+    <span class="pill">React + Redux</span>
+    <span class="pill">Razorpay</span>
+    <span class="pill">Docker</span>
+    <span class="pill">OpenFeign</span>
+    <span class="pill">Eureka</span>
+    <span class="pill">MySQL</span>
+  </div>
+</div>
+
+<div class="container">
+<div class="main-content">
+
+<!-- TOC -->
+<nav class="toc">
+  <h3>Table of Contents</h3>
+  <a href="#arch">1. System Architecture</a>
+  <a href="#services">2. Microservices Breakdown</a>
+  <a href="#auth">3. Auth Flow (Keycloak + JWT)</a>
+  <a href="#gateway">4. API Gateway & CORS</a>
+  <a href="#feign">5. Feign Client (Sync Communication)</a>
+  <a href="#rabbitmq">6. RabbitMQ (Async Communication)</a>
+  <a href="#booking">7. Booking + Payment Lifecycle</a>
+  <a href="#websocket">8. WebSocket Notifications</a>
+  <a href="#api">9. Complete API Reference</a>
+  <a href="#database">10. Database Design</a>
+  <a href="#setup">11. Local Setup (Step by Step)</a>
+  <a href="#interview">12. Interview Q&A</a>
+</nav>
+
+<!-- ===================== ARCHITECTURE ===================== -->
+<section class="section" id="arch">
+  <div class="section-header">
+    <div class="section-icon">🏗️</div>
+    <h2>System Architecture</h2>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item"><div class="label">Services</div><div class="value">10</div><div class="desc">Independent microservices</div></div>
+    <div class="info-item"><div class="label">Databases</div><div class="value">8</div><div class="desc">DB per service pattern</div></div>
+    <div class="info-item"><div class="label">Comm Types</div><div class="value">2</div><div class="desc">Sync + Async</div></div>
+    <div class="info-item"><div class="label">Auth</div><div class="value">OAuth2</div><div class="desc">Keycloak + JWT</div></div>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Overall System Architecture</div>
+    <svg width="100%" viewBox="0 0 680 560" role="img">
+      <title>Salon Booking Microservices Architecture</title>
+      <desc>System architecture showing React frontend connecting through API Gateway to multiple microservices with Keycloak, RabbitMQ, and databases</desc>
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- React Frontend -->
+      <rect x="240" y="10" width="200" height="48" rx="10" fill="#1e2d5a" stroke="#4f6bbd" stroke-width="1"/>
+      <text x="340" y="29" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#93b4f8">React Frontend</text>
+      <text x="340" y="47" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#5a78b8">Port 3000 · Redux · STOMP.js</text>
+
+      <!-- Arrow down to gateway -->
+      <line x1="340" y1="58" x2="340" y2="90" stroke="#4f6bbd" stroke-width="1.5" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+      <text x="360" y="77" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a78b8">HTTP + WS</text>
+
+      <!-- API Gateway -->
+      <rect x="180" y="90" width="320" height="56" rx="10" fill="#2a1f4a" stroke="#7c5cbf" stroke-width="1.5"/>
+      <text x="340" y="112" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#c4b5fd">API Gateway</text>
+      <text x="340" y="130" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#8b7bbf">Port 5000 · JWT validation · CORS · Eureka LB</text>
+
+      <!-- Eureka -->
+      <rect x="10" y="90" width="140" height="56" rx="8" fill="#1a2e1a" stroke="#3a6b3a" stroke-width="1"/>
+      <text x="80" y="112" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#86efac">Eureka</text>
+      <text x="80" y="128" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">Port 8070 · Registry</text>
+      <line x1="180" y1="118" x2="150" y2="118" stroke="#3a6b3a" stroke-width="1" marker-end="url(#arr)" stroke-dasharray="3 3"/>
+
+      <!-- Keycloak -->
+      <rect x="530" y="90" width="140" height="56" rx="8" fill="#2a1e10" stroke="#92400e" stroke-width="1"/>
+      <text x="600" y="112" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#fcd34d">Keycloak</text>
+      <text x="600" y="128" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a6020">Port 8080 · OAuth2</text>
+      <line x1="500" y1="118" x2="530" y2="118" stroke="#92400e" stroke-width="1" marker-end="url(#arr)" stroke-dasharray="3 3"/>
+
+      <!-- Gateway arrows down -->
+      <line x1="220" y1="146" x2="100" y2="186" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="280" y1="146" x2="220" y2="186" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="340" y1="146" x2="340" y2="186" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="400" y1="146" x2="460" y2="186" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="460" y1="146" x2="580" y2="186" stroke="#6366f1" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Service row 1 -->
+      <!-- User Service -->
+      <rect x="20" y="186" width="130" height="52" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="85" y="207" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93c5fd">User Service</text>
+      <text x="85" y="222" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8081 · user_db</text>
+      <text x="85" y="234" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a5080">Auth + Keycloak</text>
+
+      <!-- Salon -->
+      <rect x="165" y="186" width="110" height="52" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="220" y="207" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93c5fd">Salon</text>
+      <text x="220" y="222" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8082 · salon_db</text>
+      <text x="220" y="234" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a5080">CRUD + Search</text>
+
+      <!-- Category -->
+      <rect x="285" y="186" width="110" height="52" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="340" y="207" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93c5fd">Category</text>
+      <text x="340" y="222" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8083 · cat_db</text>
+      <text x="340" y="234" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a5080">Service types</text>
+
+      <!-- Service Offering -->
+      <rect x="405" y="186" width="120" height="52" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="465" y="207" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#93c5fd">Svc Offering</text>
+      <text x="465" y="222" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8084 · svc_db</text>
+      <text x="465" y="234" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a5080">Price + Duration</text>
+
+      <!-- Booking -->
+      <rect x="540" y="186" width="130" height="52" rx="8" fill="#1a2a1a" stroke="#3a6b3a" stroke-width="1.5"/>
+      <text x="605" y="207" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#86efac">Booking</text>
+      <text x="605" y="222" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">:8085 · book_db</text>
+      <text x="605" y="234" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a6a3a">Slots + Lifecycle</text>
+
+      <!-- Arrow from Booking to Payment -->
+      <line x1="605" y1="238" x2="605" y2="276" stroke="#3a6b3a" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="620" y="262" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a6a3a">Feign</text>
+
+      <!-- Payment -->
+      <rect x="520" y="276" width="170" height="56" rx="8" fill="#2a1e10" stroke="#b45309" stroke-width="1.5"/>
+      <text x="605" y="299" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#fcd34d">Payment</text>
+      <text x="605" y="315" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a6020">:8086 · payment_db</text>
+      <text x="605" y="327" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#6a5010">Razorpay + Stripe</text>
+
+      <!-- Payment to Razorpay -->
+      <line x1="605" y1="332" x2="605" y2="368" stroke="#b45309" stroke-width="1" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+      <rect x="540" y="368" width="130" height="36" rx="6" fill="#1a1508" stroke="#7a4a02" stroke-width="1"/>
+      <text x="605" y="387" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#fbbf24">Razorpay / Stripe</text>
+
+      <!-- Payment to RabbitMQ -->
+      <line x1="520" y1="304" x2="400" y2="304" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr)" stroke-dasharray="5 3"/>
+      <text x="455" y="298" font-family="Segoe UI,sans-serif" font-size="10" fill="#dc2626">async</text>
+
+      <!-- RabbitMQ -->
+      <rect x="240" y="276" width="160" height="56" rx="8" fill="#2a1515" stroke="#dc2626" stroke-width="1.5"/>
+      <text x="320" y="299" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#fca5a5">RabbitMQ</text>
+      <text x="320" y="315" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a2020">booking-queue</text>
+      <text x="320" y="327" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a2020">notification-queue</text>
+
+      <!-- RabbitMQ to Booking (confirm) -->
+      <line x1="280" y1="276" x2="200" y2="238" stroke="#dc2626" stroke-width="1" marker-end="url(#arr)" stroke-dasharray="3 3"/>
+      <text x="220" y="268" font-family="Segoe UI,sans-serif" font-size="9" fill="#dc2626">CONFIRM</text>
+
+      <!-- RabbitMQ to Notification -->
+      <line x1="320" y1="332" x2="320" y2="368" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr)" stroke-dasharray="4 3"/>
+
+      <!-- Notification Service -->
+      <rect x="220" y="368" width="200" height="52" rx="8" fill="#1a152a" stroke="#7c3aed" stroke-width="1.5"/>
+      <text x="320" y="390" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#c4b5fd">Notification</text>
+      <text x="320" y="406" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#6a4aad">:8087 · notif_db</text>
+      <text x="320" y="418" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#5a3a9a">Consumer + WebSocket</text>
+
+      <!-- Notification to WebSocket -->
+      <line x1="320" y1="420" x2="320" y2="454" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- WebSocket box -->
+      <rect x="220" y="454" width="200" height="40" rx="8" fill="#110d20" stroke="#5b21b6" stroke-width="1"/>
+      <text x="320" y="472" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#a78bfa">WebSocket STOMP</text>
+      <text x="320" y="487" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#5b21b6">/notification/user/{id} · /notification/salon/{id}</text>
+
+      <!-- WebSocket back to Frontend (dashed arc) -->
+      <path d="M240 454 Q160 360 260 58" fill="none" stroke="#5b21b6" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#arr)"/>
+      <text x="148" y="300" font-family="Segoe UI,sans-serif" font-size="9" fill="#5b21b6" transform="rotate(-80,148,300)">real-time push</text>
+
+      <!-- Review Service (small) -->
+      <rect x="20" y="276" width="110" height="52" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="75" y="297" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#93c5fd">Review</text>
+      <text x="75" y="312" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8088 · review_db</text>
+      <text x="75" y="324" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a5080">Ratings</text>
+    </svg>
+  </div>
+
+  <div class="callout info">
+    <strong>Key Pattern</strong>
+    Each microservice has its own dedicated MySQL database — true data isolation (Database-per-Service pattern). Services never share a database. They communicate only via REST (Feign) or events (RabbitMQ).
+  </div>
+</section>
+
+<!-- ===================== SERVICES ===================== -->
+<section class="section" id="services">
+  <div class="section-header">
+    <div class="section-icon">⚙️</div>
+    <h2>Microservices Breakdown</h2>
+  </div>
+
+  <div class="card-grid">
+    <div class="svc-card">
+      <span class="port">:8070</span>
+      <h4>Eureka Server</h4>
+      <div class="db-tag">No DB</div>
+      <p>Service registry. All microservices register here on startup. Gateway uses it for load-balanced routing via <code>lb://SERVICE-NAME</code>.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:5000</span>
+      <h4>API Gateway</h4>
+      <div class="db-tag">No DB</div>
+      <p>Single entry point. Validates JWT using Keycloak JWK, handles CORS centrally, routes requests to correct service via Eureka.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:8081</span>
+      <h4>User Service</h4>
+      <div class="db-tag">user_db</div>
+      <p>Signup, login, token refresh. Integrates with Keycloak Admin API via RestTemplate. Issues JWT tokens.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:8082</span>
+      <h4>Salon Service</h4>
+      <div class="db-tag">salon_db</div>
+      <p>Salon CRUD operations, city-based search, owner management. Uses UserFeignClient for JWT validation.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:8083</span>
+      <h4>Category Service</h4>
+      <div class="db-tag">category_db</div>
+      <p>Service categories (haircut, facial, spa, etc.). Uses UserFeign + SalonFeign to validate requests.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:8084</span>
+      <h4>Service Offering</h4>
+      <div class="db-tag">service_db</div>
+      <p>Individual services — name, price, duration. Supports filtering by categoryId. Uses SalonFeign + CategoryFeign.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:8085</span>
+      <h4>Booking Service</h4>
+      <div class="db-tag">booking_db</div>
+      <p>Core booking lifecycle — create, slot conflict check, status updates. Calls 4 other services via Feign.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:8086</span>
+      <h4>Payment Service</h4>
+      <div class="db-tag">payment_db</div>
+      <p>Razorpay + Stripe payment link creation and verification. Publishes events to RabbitMQ after success.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:8087</span>
+      <h4>Notification Service</h4>
+      <div class="db-tag">notif_db</div>
+      <p>Consumes RabbitMQ events, saves notifications to DB, pushes real-time updates via WebSocket STOMP.</p>
+    </div>
+    <div class="svc-card">
+      <span class="port">:8088</span>
+      <h4>Review Service</h4>
+      <div class="db-tag">review_db</div>
+      <p>Customer ratings and reviews for salons. Uses UserFeign + SalonFeign for validation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== AUTH ===================== -->
+<section class="section" id="auth">
+  <div class="section-header">
+    <div class="section-icon">🔐</div>
+    <h2>Authentication Flow — Keycloak + JWT</h2>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Signup Flow</div>
+    <svg width="100%" viewBox="0 0 680 400" role="img">
+      <title>Signup Authentication Flow</title>
+      <desc>Shows how user registration flows from frontend through User Service to Keycloak and back</desc>
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Frontend -->
+      <rect x="40" y="20" width="140" height="44" rx="8" fill="#1e2d5a" stroke="#4f6bbd" stroke-width="1"/>
+      <text x="110" y="38" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93b4f8">Frontend</text>
+      <text x="110" y="54" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a78b8">POST /auth/signup</text>
+
+      <!-- Arrow -->
+      <line x1="180" y1="42" x2="240" y2="42" stroke="#4f6bbd" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- User Service -->
+      <rect x="240" y="20" width="160" height="44" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1.5"/>
+      <text x="320" y="38" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93c5fd">User Service</text>
+      <text x="320" y="54" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">KeycloakUserService</text>
+
+      <!-- Arrow to Keycloak -->
+      <line x1="400" y1="42" x2="460" y2="42" stroke="#92400e" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <text x="430" y="36" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#f59e0b">RestTemplate</text>
+
+      <!-- Keycloak -->
+      <rect x="460" y="20" width="180" height="44" rx="8" fill="#2a1e10" stroke="#92400e" stroke-width="1.5"/>
+      <text x="550" y="38" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#fcd34d">Keycloak :8080</text>
+      <text x="550" y="54" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a6020">Identity Provider</text>
+
+      <!-- Steps box -->
+      <rect x="240" y="90" width="400" height="240" rx="10" fill="rgba(99,102,241,0.05)" stroke="rgba(99,102,241,0.2)" stroke-width="1" stroke-dasharray="5 3"/>
+      <text x="270" y="110" font-family="Segoe UI,sans-serif" font-size="11" fill="#8b8bef">Steps inside KeycloakUserService (RestTemplate calls):</text>
+
+      <!-- Step 1 -->
+      <rect x="255" y="120" width="370" height="36" rx="6" fill="#1a1a2e" stroke="#3b3b7a" stroke-width="1"/>
+      <text x="275" y="136" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#7c7cef">Step 1</text>
+      <text x="340" y="136" font-family="Segoe UI,sans-serif" font-size="11" fill="#9090c0">Get admin token</text>
+      <text x="275" y="150" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a5a8a">POST /realms/master/protocol/openid-connect/token</text>
+
+      <!-- Step 2 -->
+      <rect x="255" y="165" width="370" height="36" rx="6" fill="#1a1a2e" stroke="#3b3b7a" stroke-width="1"/>
+      <text x="275" y="181" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#7c7cef">Step 2</text>
+      <text x="340" y="181" font-family="Segoe UI,sans-serif" font-size="11" fill="#9090c0">Create user in Keycloak</text>
+      <text x="275" y="195" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a5a8a">POST /admin/realms/master/users  {username, email, password}</text>
+
+      <!-- Step 3 -->
+      <rect x="255" y="210" width="370" height="36" rx="6" fill="#1a1a2e" stroke="#3b3b7a" stroke-width="1"/>
+      <text x="275" y="226" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#7c7cef">Step 3</text>
+      <text x="340" y="226" font-family="Segoe UI,sans-serif" font-size="11" fill="#9090c0">Get new user's Keycloak ID</text>
+      <text x="275" y="240" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a5a8a">GET /admin/realms/master/users?username=xxx</text>
+
+      <!-- Step 4 -->
+      <rect x="255" y="255" width="370" height="36" rx="6" fill="#1a1a2e" stroke="#3b3b7a" stroke-width="1"/>
+      <text x="275" y="271" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#7c7cef">Step 4</text>
+      <text x="340" y="271" font-family="Segoe UI,sans-serif" font-size="11" fill="#9090c0">Assign role (CUSTOMER / SALON_OWNER)</text>
+      <text x="275" y="285" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a5a8a">POST /admin/realms/master/users/{id}/role-mappings</text>
+
+      <!-- Save to local DB -->
+      <rect x="40" y="100" width="175" height="44" rx="8" fill="#1a2a1a" stroke="#3a6b3a" stroke-width="1"/>
+      <text x="127" y="118" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#86efac">Save to MySQL</text>
+      <text x="127" y="133" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">user_db (local record)</text>
+
+      <!-- Arrow from user service down to save -->
+      <line x1="320" y1="64" x2="320" y2="80" stroke="#3b5ea6" stroke-width="1" marker-end="url(#arr2)"/>
+      <line x1="320" y1="80" x2="127" y2="80" stroke="#3b5ea6" stroke-width="1"/>
+      <line x1="127" y1="80" x2="127" y2="100" stroke="#3b5ea6" stroke-width="1" marker-end="url(#arr2)"/>
+
+      <!-- Response -->
+      <rect x="40" y="170" width="175" height="52" rx="8" fill="#152a15" stroke="#1a4a1a" stroke-width="1"/>
+      <text x="127" y="190" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#86efac">Return to Frontend</text>
+      <text x="127" y="205" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">{jwt, refreshToken,</text>
+      <text x="127" y="218" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a"> message}</text>
+
+      <line x1="127" y1="144" x2="127" y2="170" stroke="#3a6b3a" stroke-width="1" marker-end="url(#arr2)"/>
+
+      <!-- Token from KC -->
+      <text x="350" y="350" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#7a6020">get JWT → POST /token grant_type=password</text>
+      <line x1="550" y1="332" x2="550" y2="348" stroke="#92400e" stroke-width="1"/>
+      <line x1="550" y1="348" x2="200" y2="348" stroke="#92400e" stroke-width="1" marker-end="url(#arr2)"/>
+      <text x="590" y="345" font-family="Segoe UI,sans-serif" font-size="10" fill="#92400e">JWT issued</text>
+    </svg>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Per-Request JWT Validation (Stateless)</div>
+    <svg width="100%" viewBox="0 0 680 200" role="img">
+      <title>JWT validation flow per request</title>
+      <desc>Shows how every API request is validated at the gateway using Keycloak public keys</desc>
+      <defs>
+        <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <rect x="20" y="60" width="140" height="52" rx="8" fill="#1e2d5a" stroke="#4f6bbd" stroke-width="1"/>
+      <text x="90" y="82" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#93b4f8">Frontend</text>
+      <text x="90" y="97" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a78b8">Authorization:</text>
+      <text x="90" y="109" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a78b8">Bearer &lt;jwt&gt;</text>
+
+      <line x1="160" y1="86" x2="200" y2="86" stroke="#4f6bbd" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+      <rect x="200" y="60" width="170" height="52" rx="8" fill="#2a1f4a" stroke="#7c5cbf" stroke-width="1.5"/>
+      <text x="285" y="82" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#c4b5fd">API Gateway</text>
+      <text x="285" y="97" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#8b7bbf">Verify JWT locally</text>
+      <text x="285" y="109" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#8b7bbf">using cached JWK key</text>
+
+      <text x="285" y="145" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#f59e0b">⚡ No Keycloak call per request!</text>
+      <text x="285" y="158" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#7a6020">Public key cached from /certs endpoint</text>
+
+      <line x1="370" y1="86" x2="420" y2="86" stroke="#3a6b3a" stroke-width="1.5" marker-end="url(#arr3)"/>
+      <text x="395" y="80" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#86efac">Valid</text>
+
+      <rect x="420" y="60" width="230" height="52" rx="8" fill="#1a2a1a" stroke="#3a6b3a" stroke-width="1.5"/>
+      <text x="535" y="82" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#86efac">Microservice</text>
+      <text x="535" y="97" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">Calls UserFeign.getUserFromToken(jwt)</text>
+      <text x="535" y="109" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">→ gets userId, email, roles</text>
+
+      <!-- Keycloak JWK -->
+      <rect x="200" y="0" width="170" height="34" rx="6" fill="#2a1e10" stroke="#92400e" stroke-width="1"/>
+      <text x="285" y="21" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#fcd34d">Keycloak JWK Endpoint</text>
+      <text x="285" y="32" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#7a6020">/certs (fetched once, cached)</text>
+      <line x1="285" y1="34" x2="285" y2="60" stroke="#92400e" stroke-width="1" stroke-dasharray="3 3" marker-end="url(#arr3)"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ===================== GATEWAY ===================== -->
+<section class="section" id="gateway">
+  <div class="section-header">
+    <div class="section-icon">🚪</div>
+    <h2>API Gateway & CORS</h2>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-bottom:12px;font-size:15px;">Route Table (gateway application.yml)</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Route ID</th><th>URI</th><th>Path Predicates</th></tr></thead>
+        <tbody>
+          <tr><td>USER</td><td>lb://USER</td><td>/auth/**, /api/users/**</td></tr>
+          <tr><td>SALON</td><td>lb://SALON</td><td>/api/salons/**</td></tr>
+          <tr><td>CATEGORY</td><td>lb://CATEGORY</td><td>/api/categories/**</td></tr>
+          <tr><td>SERVICE_OFFERING</td><td>lb://SERVICE-OFFERING</td><td>/api/service-offering/**</td></tr>
+          <tr><td>BOOKING</td><td>lb://BOOKING</td><td>/api/bookings/**</td></tr>
+          <tr><td>PAYMENT</td><td>lb://PAYMENT</td><td>/api/payments/**</td></tr>
+          <tr><td>NOTIFICATION</td><td>lb://NOTIFICATION</td><td>/api/notifications/**</td></tr>
+          <tr><td>REVIEW</td><td>lb://REVIEW</td><td>/api/reviews/**</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <strong>CORS — Central Config</strong>
+    CORS is configured ONCE in the gateway. Individual microservices have ZERO <code>@CrossOrigin</code> annotations. Gateway adds <code>DedupeResponseHeader</code> filter to prevent duplicate CORS headers that break browser preflight.
+  </div>
+
+<pre><code>spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:3000"
+              - "https://salon-booking-three.vercel.app"
+            allowedMethods: [GET, POST, PUT, DELETE, PATCH, OPTIONS]
+            allowedHeaders: ["*"]
+            allowCredentials: true
+  security:
+    oauth2:
+      resource-server:
+        jwt:
+          jwk-set-uri: http://localhost:8080/realms/master/protocol/openid-connect/certs</code></pre>
+</section>
+
+<!-- ===================== FEIGN ===================== -->
+<section class="section" id="feign">
+  <div class="section-header">
+    <div class="section-icon">🔗</div>
+    <h2>Feign Client — Sync Communication</h2>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Feign Client Dependency Map</div>
+    <svg width="100%" viewBox="0 0 680 340" role="img">
+      <title>Feign client dependency map between microservices</title>
+      <desc>Shows which services call which other services via OpenFeign HTTP client</desc>
+      <defs>
+        <marker id="arr4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- User Service (center top) -->
+      <rect x="270" y="10" width="140" height="44" rx="8" fill="#1e2d5a" stroke="#4f6bbd" stroke-width="1.5"/>
+      <text x="340" y="30" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93b4f8">User Service</text>
+      <text x="340" y="46" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#5a78b8">:8081</text>
+
+      <!-- Salon -->
+      <rect x="490" y="10" width="140" height="44" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="560" y="30" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93c5fd">Salon</text>
+      <text x="560" y="46" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8082</text>
+
+      <!-- Category -->
+      <rect x="50" y="130" width="130" height="44" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="115" y="150" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93c5fd">Category</text>
+      <text x="115" y="166" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8083</text>
+
+      <!-- Service Offering -->
+      <rect x="210" y="130" width="140" height="44" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="280" y="150" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#93c5fd">Svc Offering</text>
+      <text x="280" y="166" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8084</text>
+
+      <!-- Booking -->
+      <rect x="370" y="130" width="130" height="44" rx="8" fill="#1a2a1a" stroke="#3a6b3a" stroke-width="1.5"/>
+      <text x="435" y="150" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#86efac">Booking</text>
+      <text x="435" y="166" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">:8085</text>
+
+      <!-- Payment -->
+      <rect x="520" y="130" width="130" height="44" rx="8" fill="#2a1e10" stroke="#b45309" stroke-width="1"/>
+      <text x="585" y="150" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#fcd34d">Payment</text>
+      <text x="585" y="166" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a6020">:8086</text>
+
+      <!-- Notification -->
+      <rect x="50" y="260" width="140" height="44" rx="8" fill="#1a152a" stroke="#7c3aed" stroke-width="1"/>
+      <text x="120" y="280" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#c4b5fd">Notification</text>
+      <text x="120" y="296" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#6a4aad">:8087</text>
+
+      <!-- Review -->
+      <rect x="210" y="260" width="130" height="44" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="275" y="280" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#93c5fd">Review</text>
+      <text x="275" y="296" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">:8088</text>
+
+      <!-- ARROWS: Category calls User + Salon -->
+      <line x1="180" y1="152" x2="270" y2="50" stroke="#4f6bbd" stroke-width="1" marker-end="url(#arr4)"/>
+      <text x="210" y="95" font-family="Segoe UI,sans-serif" font-size="9" fill="#4f6bbd">UserFeign</text>
+      <line x1="180" y1="160" x2="490" y2="40" stroke="#3b5ea6" stroke-width="1" marker-end="url(#arr4)"/>
+      <text x="340" y="118" font-family="Segoe UI,sans-serif" font-size="9" fill="#3b5ea6">SalonFeign</text>
+
+      <!-- Service Offering calls Salon + Category -->
+      <line x1="280" y1="130" x2="475" y2="54" stroke="#3b5ea6" stroke-width="1" marker-end="url(#arr4)"/>
+      <line x1="250" y1="130" x2="180" y2="174" stroke="#3b5ea6" stroke-width="1" marker-end="url(#arr4)"/>
+
+      <!-- Booking calls User, Salon, ServiceOffering, Payment -->
+      <line x1="435" y1="130" x2="340" y2="54" stroke="#3a6b3a" stroke-width="1.5" marker-end="url(#arr4)"/>
+      <line x1="460" y1="130" x2="560" y2="54" stroke="#3a6b3a" stroke-width="1.5" marker-end="url(#arr4)"/>
+      <line x1="410" y1="130" x2="350" y2="174" stroke="#3a6b3a" stroke-width="1.5" marker-end="url(#arr4)"/>
+      <line x1="500" y1="152" x2="520" y2="152" stroke="#3a6b3a" stroke-width="1.5" marker-end="url(#arr4)"/>
+      <text x="504" y="147" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a6b3a">PaymentFeign</text>
+
+      <!-- Payment calls User -->
+      <line x1="585" y1="130" x2="400" y2="54" stroke="#b45309" stroke-width="1" marker-end="url(#arr4)"/>
+
+      <!-- Notification calls Booking -->
+      <line x1="190" y1="282" x2="370" y2="174" stroke="#7c3aed" stroke-width="1" marker-end="url(#arr4)"/>
+      <text x="268" y="240" font-family="Segoe UI,sans-serif" font-size="9" fill="#7c3aed">BookingFeign</text>
+
+      <!-- Review calls User + Salon -->
+      <line x1="340" y1="282" x2="340" y2="54" stroke="#3b5ea6" stroke-width="1" marker-end="url(#arr4)"/>
+      <line x1="320" y1="282" x2="530" y2="54" stroke="#3b5ea6" stroke-width="1" marker-end="url(#arr4)"/>
+    </svg>
+  </div>
+
+  <div class="card">
+    <h4 style="margin-bottom:12px;">RestTemplate vs OpenFeign — Why Both?</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Aspect</th><th>RestTemplate</th><th>OpenFeign</th></tr></thead>
+        <tbody>
+          <tr><td>Style</td><td>Imperative — manual HTTP code</td><td>Declarative — just interface</td></tr>
+          <tr><td>Content-Type</td><td>Full control (form-urlencoded ✅)</td><td>Defaults to JSON only</td></tr>
+          <tr><td>Service Discovery</td><td>Manual URL construction</td><td>Auto via Eureka lb://</td></tr>
+          <tr><td>Used for</td><td>Keycloak Admin REST API</td><td>All inter-service calls</td></tr>
+          <tr><td>Why chosen</td><td>Keycloak needs form-urlencoded POST</td><td>Clean, readable, no boilerplate</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+<pre><code>// OpenFeign — just an interface, Spring generates implementation
+@FeignClient(name = "USER", url = "${USER_SERVICE_URL:}")
+public interface UserFeignClient {
+    @GetMapping("/api/users/profile")
+    ResponseEntity&lt;UserDTO&gt; getUserFromToken(
+        @RequestHeader("Authorization") String jwt);
+
+    @GetMapping("/api/users/{userId}")
+    ResponseEntity&lt;UserDTO&gt; getUserById(@PathVariable Long userId);
+}
+// Usage: userFeignClient.getUserFromToken(jwt).getBody();
+// No URL hardcoding. lb://USER → Eureka finds it automatically.</code></pre>
+</section>
+
+<!-- ===================== RABBITMQ ===================== -->
+<section class="section" id="rabbitmq">
+  <div class="section-header">
+    <div class="section-icon">🐰</div>
+    <h2>RabbitMQ — Async Communication</h2>
+  </div>
+
+  <div class="diagram-wrap">
+    <div class="diagram-label">Event Flow After Payment Success</div>
+    <svg width="100%" viewBox="0 0 680 460" role="img">
+      <title>RabbitMQ async event flow after payment</title>
+      <desc>Shows how payment completion triggers asynchronous events through RabbitMQ to booking confirmation and real-time notifications</desc>
+      <defs>
+        <marker id="arr5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Payment Service -->
+      <rect x="220" y="10" width="240" height="56" rx="10" fill="#2a1e10" stroke="#b45309" stroke-width="2"/>
+      <text x="340" y="33" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="600" fill="#fcd34d">Payment Service</text>
+      <text x="340" y="52" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#7a6020">Razorpay confirms: status = "captured"</text>
+
+      <!-- Arrow down to publishers -->
+      <line x1="300" y1="66" x2="200" y2="104" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr5)"/>
+      <line x1="380" y1="66" x2="480" y2="104" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr5)"/>
+
+      <!-- Booking Event Producer -->
+      <rect x="60" y="104" width="180" height="44" rx="8" fill="#1a2a1a" stroke="#3a6b3a" stroke-width="1"/>
+      <text x="150" y="123" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#86efac">BookingEventProducer</text>
+      <text x="150" y="138" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">rabbitTemplate.convertAndSend</text>
+
+      <!-- Notification Event Producer -->
+      <rect x="440" y="104" width="200" height="44" rx="8" fill="#1a2a1a" stroke="#3a6b3a" stroke-width="1"/>
+      <text x="540" y="123" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#86efac">NotificationEventProducer</text>
+      <text x="540" y="138" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">rabbitTemplate.convertAndSend</text>
+
+      <!-- Booking Queue -->
+      <rect x="60" y="186" width="180" height="44" rx="8" fill="#2a1515" stroke="#dc2626" stroke-width="1.5"/>
+      <text x="150" y="205" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#fca5a5">booking-queue</text>
+      <text x="150" y="220" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a2020">RabbitMQ</text>
+
+      <!-- Notification Queue -->
+      <rect x="440" y="186" width="200" height="44" rx="8" fill="#2a1515" stroke="#dc2626" stroke-width="1.5"/>
+      <text x="540" y="205" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="12" font-weight="600" fill="#fca5a5">notification-queue</text>
+      <text x="540" y="220" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a2020">RabbitMQ</text>
+
+      <!-- [ASYNC] labels -->
+      <text x="150" y="165" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#dc2626" font-style="italic">▼ fire-and-forget</text>
+      <text x="540" y="165" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" fill="#dc2626" font-style="italic">▼ fire-and-forget</text>
+
+      <line x1="150" y1="148" x2="150" y2="186" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr5)"/>
+      <line x1="540" y1="148" x2="540" y2="186" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr5)"/>
+
+      <!-- Consumers -->
+      <rect x="60" y="268" width="180" height="44" rx="8" fill="#1e2535" stroke="#3b5ea6" stroke-width="1"/>
+      <text x="150" y="287" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#93c5fd">BookingEventConsumer</text>
+      <text x="150" y="302" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a6a9a">@RabbitListener</text>
+
+      <rect x="440" y="268" width="200" height="44" rx="8" fill="#1a152a" stroke="#7c3aed" stroke-width="1"/>
+      <text x="540" y="287" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#c4b5fd">NotificationEventConsumer</text>
+      <text x="540" y="302" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#6a4aad">@RabbitListener</text>
+
+      <line x1="150" y1="230" x2="150" y2="268" stroke="#3b5ea6" stroke-width="1.5" marker-end="url(#arr5)"/>
+      <line x1="540" y1="230" x2="540" y2="268" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr5)"/>
+
+      <!-- Results -->
+      <rect x="30" y="350" width="230" height="44" rx="8" fill="#152a15" stroke="#1a4a1a" stroke-width="1"/>
+      <text x="145" y="368" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#86efac">Booking: PENDING → CONFIRMED</text>
+      <text x="145" y="383" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">bookingService.bookingSuccess()</text>
+
+      <rect x="390" y="350" width="270" height="44" rx="8" fill="#110d20" stroke="#5b21b6" stroke-width="1"/>
+      <text x="525" y="368" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#a78bfa">WebSocket Push to User + Salon</text>
+      <text x="525" y="383" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#5b21b6">SimpMessagingTemplate.convertAndSend()</text>
+
+      <line x1="150" y1="312" x2="145" y2="350" stroke="#3a6b3a" stroke-width="1.5" marker-end="url(#arr5)"/>
+      <line x1="540" y1="312" x2="525" y2="350" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr5)"/>
+
+      <!-- ASYNC label in center -->
+      <rect x="260" y="240" width="160" height="36" rx="8" fill="rgba(220,38,38,0.1)" stroke="rgba(220,38,38,0.3)" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="340" y="257" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="11" font-weight="600" fill="#dc2626">[ASYNC]</text>
+      <text x="340" y="271" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a2020">Independent of Payment Service</text>
+    </svg>
+  </div>
+
+  <div class="callout warn">
+    <strong>Why Async here?</strong>
+    If Notification Service is down, Payment should still succeed. With RabbitMQ, Payment fires-and-forgets → messages queue up → delivered when Notification Service recovers. No tight coupling. System stays resilient.
+  </div>
+
+<pre><code>// Queue Configuration (Payment Service)
+@Bean public Queue bookingQueue() { return new Queue("booking-queue"); }
+@Bean public Queue notificationQueue() { return new Queue("notification-queue"); }
+
+// Jackson2JsonMessageConverter handles Java Object ↔ JSON automatically
+@Bean
+public RabbitTemplate rabbitTemplate(ConnectionFactory cf, Jackson2JsonMessageConverter converter) {
+    RabbitTemplate rt = new RabbitTemplate(cf);
+    rt.setMessageConverter(converter);
+    return rt;
+}
+
+// Producer — fires-and-forgets
+rabbitTemplate.convertAndSend("booking-queue", paymentOrder);
+rabbitTemplate.convertAndSend("notification-queue", notificationDTO);
+
+// Consumer — in Booking Service
+@RabbitListener(queues = "booking-queue")
+public void handleBookingEvent(PaymentOrder paymentOrder) {
+    bookingService.bookingSuccess(paymentOrder);  // status → CONFIRMED
+}</code></pre>
+</section>
+
+<!-- ===================== BOOKING PAYMENT ===================== -->
+<section class="section" id="booking">
+  <div class="section-header">
+    <div class="section-icon">📅</div>
+    <h2>Booking + Payment Lifecycle</h2>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><h4>User Selects Salon + Services + Time Slot</h4><p>Frontend collects salonId, serviceIds[], startTime</p></div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><h4>POST /api/bookings?salonId=X&paymentMethod=RAZORPAY</h4><p>Body: <code>{serviceIds: [1,3], startTime: "2025-06-20T10:00:00"}</code> with JWT header</p></div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><h4>Booking Service Calls 3 Services via Feign</h4><p>UserFeign → get user details · SalonFeign → get salon hours · ServiceOfferingFeign → get prices + durations</p></div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content"><h4>Slot Conflict Check Algorithm</h4><p>For every existing booking: <code>overlap = (newStart &lt; existingEnd) AND (newEnd &gt; existingStart)</code>. Also validates against salon open/close hours.</p></div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-content"><h4>Calculate Totals + Save Booking (PENDING)</h4><p>totalPrice = sum of all service prices. endTime = startTime + total duration in minutes</p></div></div>
+    <div class="step"><div class="step-num">6</div><div class="step-content"><h4>Call Payment Service via Feign → Create Razorpay Link</h4><p>Returns short_url like <code>https://rzp.io/l/abc123</code>. Frontend redirects user to Razorpay.</p></div></div>
+    <div class="step"><div class="step-num">7</div><div class="step-content"><h4>After Payment → Callback</h4><p>Razorpay redirects to <code>/payment-success/{orderId}?razorpay_payment_id=xxx</code></p></div></div>
+    <div class="step"><div class="step-num">8</div><div class="step-content"><h4>PATCH /api/payments/proceed?paymentId=xxx&paymentLinkId=yyy</h4><p>Payment Service verifies via Razorpay SDK. Status = "captured" → SUCCESS</p></div></div>
+    <div class="step"><div class="step-num">9</div><div class="step-content"><h4>Publish to RabbitMQ (Async)</h4><p>booking-queue → Booking status PENDING→CONFIRMED. notification-queue → WebSocket push to customer + salon owner</p></div></div>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <h4 style="margin-bottom:12px;">Booking Status Lifecycle</h4>
+    <svg width="100%" viewBox="0 0 680 100" role="img">
+      <title>Booking status lifecycle</title>
+      <defs>
+        <marker id="arr6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <rect x="40" y="28" width="120" height="44" rx="8" fill="#2a2015" stroke="#b45309" stroke-width="1.5"/>
+      <text x="100" y="50" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#fcd34d">PENDING</text>
+      <text x="100" y="66" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a6020">Created</text>
+
+      <line x1="160" y1="50" x2="220" y2="50" stroke="#3a6b3a" stroke-width="2" marker-end="url(#arr6)"/>
+      <text x="190" y="44" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#3a6b3a">payment ok</text>
+
+      <rect x="220" y="28" width="150" height="44" rx="8" fill="#152a15" stroke="#3a6b3a" stroke-width="2"/>
+      <text x="295" y="50" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#86efac">CONFIRMED</text>
+      <text x="295" y="66" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#4a7a4a">RabbitMQ event</text>
+
+      <line x1="370" y1="50" x2="430" y2="50" stroke="#dc2626" stroke-width="2" marker-end="url(#arr6)"/>
+      <text x="400" y="44" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#dc2626">cancelled</text>
+
+      <rect x="430" y="28" width="150" height="44" rx="8" fill="#2a1515" stroke="#dc2626" stroke-width="2"/>
+      <text x="505" y="50" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="13" font-weight="700" fill="#fca5a5">CANCELLED</text>
+      <text x="505" y="66" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="10" fill="#7a2020">Manual action</text>
+
+      <line x1="160" y1="72" x2="220" y2="72" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr6)" stroke-dasharray="4 3"/>
+      <line x1="185" y1="72" x2="185" y2="85" stroke="#dc2626" stroke-width="1"/>
+      <line x1="185" y1="85" x2="435" y2="85" stroke="#dc2626" stroke-width="1"/>
+      <line x1="435" y1="85" x2="435" y2="72" stroke="#dc2626" stroke-width="1" marker-end="url(#arr6)"/>
+      <text x="310" y="96" text-anchor="middle" font-family="Segoe UI,sans-serif" font-size="9" fill="#dc2626">payment failed → FAILED</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ===================== WEBSOCKET ===================== -->
+<section class="section" id="websocket">
+  <div class="section-header">
+    <div class="section-icon">⚡</div>
+    <h2>WebSocket Real-Time Notifications</h2>
+  </div>
+
+<pre><code>// Server — Notification Service
+@Configuration
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker("/notification");
+        registry.setApplicationDestinationPrefixes("/app");
+    }
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws").setAllowedOriginPatterns("*").withSockJS();
+    }
+}
+
+// Push to both customer AND salon owner simultaneously
+@Component
+public class RealTimeCommunicationService {
+    private final SimpMessagingTemplate messagingTemplate;
+
+    public void sendNotification(NotificationDTO notification) {
+        messagingTemplate.convertAndSend(
+            "/notification/user/" + notification.getUserId(), notification);
+        messagingTemplate.convertAndSend(
+            "/notification/salon/" + notification.getSalonId(), notification);
+    }
+}</code></pre>
+
+<pre><code>// Client — React (STOMP.js)
+const client = new Client({ brokerURL: 'ws://localhost:5000/ws' });
+
+client.onConnect = () => {
+  client.subscribe(`/notification/user/${currentUserId}`, (message) => {
+    const notification = JSON.parse(message.body);
+    showToast(notification.message);  // Real-time toast popup!
+  });
+};
+client.activate();</code></pre>
+
+  <div class="callout tip">
+    <strong>No Polling!</strong>
+    Browser stays connected via WebSocket. When payment is confirmed → RabbitMQ → Notification Service → STOMP push → React toast appears instantly. Both customer and salon owner notified simultaneously from the same event.
+  </div>
+</section>
+
+<!-- ===================== API REFERENCE ===================== -->
+<section class="section" id="api">
+  <div class="section-header">
+    <div class="section-icon">📖</div>
+    <h2>Complete API Reference</h2>
+  </div>
+
+  <div class="card"><h4 style="margin-bottom:12px;color:#fca5a5;">🔐 Auth Endpoints — User Service (:8081)</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method post">POST</span></td><td>/auth/signup</td><td>None</td><td>Register user → Keycloak + local DB</td></tr>
+      <tr><td><span class="method post">POST</span></td><td>/auth/login</td><td>None</td><td>Login → returns JWT + refresh token</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/auth/access-token/refresh-token/{token}</td><td>None</td><td>Get new access token</td></tr>
+    </tbody>
+  </table></div></div>
+
+  <div class="card"><h4 style="margin-bottom:12px;color:#93c5fd;">👤 User Endpoints</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method get">GET</span></td><td>/api/users/profile</td><td>JWT</td><td>Get profile from token</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/users/{userId}</td><td>JWT</td><td>Get user by ID</td></tr>
+    </tbody>
+  </table></div></div>
+
+  <div class="card"><h4 style="margin-bottom:12px;color:#93c5fd;">💇 Salon Endpoints</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method post">POST</span></td><td>/api/salons</td><td>JWT (OWNER)</td><td>Create new salon</td></tr>
+      <tr><td><span class="method put">PUT</span></td><td>/api/salons/{id}</td><td>JWT (OWNER)</td><td>Update salon details</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/salons</td><td>None</td><td>Get all salons</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/salons/{id}</td><td>None</td><td>Get salon by ID</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/salons/search?city=X</td><td>None</td><td>Search by city</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/salons/owner</td><td>JWT (OWNER)</td><td>Get owner's salon</td></tr>
+    </tbody>
+  </table></div></div>
+
+  <div class="card"><h4 style="margin-bottom:12px;color:#86efac;">📅 Booking Endpoints (Core)</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method post">POST</span></td><td>/api/bookings?salonId=X&paymentMethod=RAZORPAY</td><td>JWT</td><td>Create booking + payment link</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/bookings/customer</td><td>JWT</td><td>All customer bookings</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/bookings/salon</td><td>JWT (OWNER)</td><td>All salon bookings</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/bookings/report</td><td>JWT (OWNER)</td><td>Revenue report (totalEarnings, count, refunds)</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/bookings/slots/salon/{id}/date/{date}</td><td>JWT</td><td>Booked slots by date</td></tr>
+      <tr><td><span class="method put">PUT</span></td><td>/api/bookings/{id}/status?status=CANCELLED</td><td>JWT</td><td>Update booking status</td></tr>
+    </tbody>
+  </table></div></div>
+
+  <div class="card"><h4 style="margin-bottom:12px;color:#fcd34d;">💳 Payment Endpoints</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method post">POST</span></td><td>/api/payments/create?paymentMethod=RAZORPAY</td><td>JWT</td><td>Create Razorpay payment link</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/payments/{paymentOrderId}</td><td>JWT</td><td>Get payment order by ID</td></tr>
+      <tr><td><span class="method patch">PATCH</span></td><td>/api/payments/proceed?paymentId=xxx&paymentLinkId=yyy</td><td>JWT</td><td>Verify & process payment callback</td></tr>
+    </tbody>
+  </table></div></div>
+
+  <div class="card"><h4 style="margin-bottom:12px;color:#c4b5fd;">🔔 Notification + ⭐ Review Endpoints</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method get">GET</span></td><td>/api/notifications</td><td>Get all notifications for user</td></tr>
+      <tr><td><span class="method put">PUT</span></td><td>/api/notifications/{id}/read</td><td>Mark notification as read</td></tr>
+      <tr><td><span class="method post">POST</span></td><td>/api/reviews/salon/{salonId}</td><td>Submit review for salon</td></tr>
+      <tr><td><span class="method get">GET</span></td><td>/api/reviews/salon/{salonId}</td><td>Get all reviews for salon</td></tr>
+    </tbody>
+  </table></div></div>
+</section>
+
+<!-- ===================== DATABASE ===================== -->
+<section class="section" id="database">
+  <div class="section-header">
+    <div class="section-icon">🗄️</div>
+    <h2>Database Design (DB-per-Service)</h2>
+  </div>
+
+  <div class="callout info">
+    <strong>Database Per Service Pattern</strong>
+    Each service owns its own MySQL database. Services NEVER query another service's DB. Data sharing happens ONLY via REST (Feign) or events (RabbitMQ). This is the core principle of microservices data isolation.
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4 style="color:#93b4f8;margin-bottom:8px;">user_db · User Service</h4>
+      <code>users</code>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">id · email · full_name · phone · role (CUSTOMER/SALON_OWNER) · created_at</p>
+    </div>
+    <div class="card">
+      <h4 style="color:#93c5fd;margin-bottom:8px;">salon_db · Salon Service</h4>
+      <code>salons</code>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">id · owner_id · name · city · address · open_time · close_time</p>
+    </div>
+    <div class="card">
+      <h4 style="color:#93c5fd;margin-bottom:8px;">category_db · Category Service</h4>
+      <code>categories</code>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">id · salon_id · name · description</p>
+    </div>
+    <div class="card">
+      <h4 style="color:#93c5fd;margin-bottom:8px;">service_db · Service Offering</h4>
+      <code>service_offerings</code>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">id · salon_id · category_id · name · price · duration_minutes</p>
+    </div>
+    <div class="card">
+      <h4 style="color:#86efac;margin-bottom:8px;">booking_db · Booking Service</h4>
+      <code>bookings</code>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">id · customer_id · salon_id · service_ids · start_time · end_time · total_price · status</p>
+    </div>
+    <div class="card">
+      <h4 style="color:#fcd34d;margin-bottom:8px;">payment_db · Payment Service</h4>
+      <code>payment_orders</code>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">id · user_id · booking_id · amount · payment_method · payment_link_id · status</p>
+    </div>
+    <div class="card">
+      <h4 style="color:#c4b5fd;margin-bottom:8px;">notif_db · Notification Service</h4>
+      <code>notifications</code>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">id · user_id · salon_id · booking_id · type · description · is_read</p>
+    </div>
+    <div class="card">
+      <h4 style="color:#93c5fd;margin-bottom:8px;">review_db · Review Service</h4>
+      <code>reviews</code>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px;">id · user_id · salon_id · rating · comment · created_at</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SETUP ===================== -->
+<section class="section" id="setup">
+  <div class="section-header">
+    <div class="section-icon">🚀</div>
+    <h2>Local Setup Guide (Step by Step)</h2>
+  </div>
+
+  <div class="callout info">
+    <strong>Prerequisites</strong>
+    Java 17+ · Maven 3.8+ · Node.js 18+ · Docker Desktop · MySQL 8.x · IntelliJ IDEA · VS Code
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Start Keycloak via Docker</h4>
+        <pre><code>docker run -p 8080:8080 \
+  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+  quay.io/keycloak/keycloak:26.1.0 start-dev</code></pre>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Configure Keycloak (http://localhost:8080)</h4>
+        <p>a. Create Client → Client ID: <code>salon-booking-client</code> → Enable Client Authentication → copy Client Secret<br>
+        b. Create Client Roles: <code>CUSTOMER</code> and <code>SALON_OWNER</code><br>
+        c. Create admin user → assign realm-admin role → turn OFF "Temporary" password<br>
+        d. Realm Settings → Tokens → Access Token Lifespan: 30 minutes</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>Update user-service/application.yml</h4>
+        <pre><code>keycloak:
+  client-id: salon-booking-client
+  client-secret: &lt;paste-from-keycloak&gt;
+  admin-username: admin@gmail.com
+  admin-password: admin
+  base-url: http://localhost:8080</code></pre>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h4>Start RabbitMQ via Docker</h4>
+        <pre><code>docker run -d --name rabbitmq \
+  -p 5672:5672 -p 15672:15672 \
+  rabbitmq:3-management
+# Management UI: http://localhost:15672 (guest/guest)</code></pre>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h4>Create MySQL Databases</h4>
+        <pre><code>CREATE DATABASE user_db;      CREATE DATABASE salon_db;
+CREATE DATABASE category_db;  CREATE DATABASE service_db;
+CREATE DATABASE booking_db;   CREATE DATABASE payment_db;
+CREATE DATABASE notification_db; CREATE DATABASE review_db;</code></pre>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-content">
+        <h4>Add Razorpay Keys (payment/application.yml)</h4>
+        <pre><code>razorpay:
+  api:
+    key: rzp_test_xxxxxxxxxx
+    secret: xxxxxxxxxxxxxxxxxx</code></pre>
+        <p>Get from: https://dashboard.razorpay.com/app/keys (Test mode)</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-content">
+        <h4>Start All Backend Services (separate terminals)</h4>
+        <pre><code># 1. Eureka FIRST
+cd eurekaserver && mvn spring-boot:run
+
+# 2. All microservices
+cd user-service && mvn spring-boot:run
+cd salon && mvn spring-boot:run
+cd category && mvn spring-boot:run
+cd service-offering && mvn spring-boot:run
+cd booking && mvn spring-boot:run
+cd payment && mvn spring-boot:run
+cd notifications && mvn spring-boot:run
+cd review && mvn spring-boot:run
+
+# 3. Gateway LAST
+cd gateway-server && mvn spring-boot:run</code></pre>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">8</div>
+      <div class="step-content">
+        <h4>Start Frontend</h4>
+        <pre><code>cd frontend
+npm install
+npm start
+# Open: http://localhost:3000</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <h4 style="margin-bottom:12px;">Verify Everything is Running</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Service</th><th>URL</th><th>Expected</th></tr></thead>
+        <tbody>
+          <tr><td>Eureka</td><td>http://localhost:8070</td><td>All services listed in registry</td></tr>
+          <tr><td>Keycloak</td><td>http://localhost:8080</td><td>Admin console accessible</td></tr>
+          <tr><td>RabbitMQ</td><td>http://localhost:15672</td><td>Queue dashboard (guest/guest)</td></tr>
+          <tr><td>API Gateway</td><td>http://localhost:5000</td><td>Routes active</td></tr>
+          <tr><td>Frontend</td><td>http://localhost:3000</td><td>App loads, login works</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== INTERVIEW ===================== -->
+<section class="section" id="interview">
+  <div class="section-header">
+    <div class="section-icon">🎯</div>
+    <h2>Interview Q&A — Talking Points</h2>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">Why microservices over monolith?</div>
+    <div class="qa-a">Each service (Booking, Payment, Notification) can be deployed, scaled, and maintained independently. If Notification Service crashes, bookings still work. With a monolith, one failure = everything fails. Also, different services can be scaled differently — Payment Service might need more instances than Category Service during peak hours.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How do services communicate? Explain sync vs async.</div>
+    <div class="qa-a"><strong>Synchronous (Feign):</strong> When we need an immediate response — e.g. Booking Service needs user details before saving a booking. Uses Eureka for service discovery — no hardcoded URLs. If the called service is down, the request fails.<br><br><strong>Asynchronous (RabbitMQ):</strong> When we don't need an immediate response — e.g. after payment success, we publish to queues. Booking and Notification services react independently. System stays responsive even if one service is slow or temporarily down.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">Why Keycloak instead of custom JWT?</div>
+    <div class="qa-a">Keycloak provides battle-tested OAuth2/OIDC implementation with RBAC, token refresh, user management, admin API, and session management out of the box. Building custom JWT would take months and introduce security vulnerabilities. Keycloak also provides a JWK endpoint so Gateway can validate tokens locally without any DB calls — key for scalability.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How does Gateway validate tokens WITHOUT calling Keycloak for every request?</div>
+    <div class="qa-a">Gateway uses Keycloak's JWK (JSON Web Key) endpoint to fetch the RSA public key ONCE and caches it. Every JWT is verified locally using RSA signature — zero network call per request. This is stateless validation. Config: <code>spring.security.oauth2.resource-server.jwt.jwk-set-uri</code> pointing to Keycloak's <code>/certs</code> endpoint. This is a critical performance and scalability advantage.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">RestTemplate vs OpenFeign — when to use which?</div>
+    <div class="qa-a"><strong>RestTemplate</strong> is used for Keycloak Admin API calls because Keycloak's token endpoint requires <code>Content-Type: application/x-www-form-urlencoded</code> (form data). OpenFeign's default encoder sends JSON, which fails. RestTemplate gives full manual control over headers and body encoding.<br><br><strong>OpenFeign</strong> is used for all inter-microservice calls because it's declarative (just an interface), auto-discovers services via Eureka (no hardcoded URLs), and requires zero boilerplate HTTP code. Spring generates the implementation automatically.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How is slot conflict detection implemented?</div>
+    <div class="qa-a">The <code>isTimeSlotAvailable()</code> method fetches all existing bookings for the salon on that date. Then uses the interval overlap formula: <code>overlap = (newStart &lt; existingEnd) AND (newEnd &gt; existingStart)</code>. This handles all edge cases — same start, same end, contained within, overlapping left/right. Also validates that the slot falls within salon's open/close hours.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How does RabbitMQ decouple Payment from Notification?</div>
+    <div class="qa-a">Payment Service calls <code>rabbitTemplate.convertAndSend("notification-queue", dto)</code> — fire-and-forget. It doesn't wait for Notification Service to respond. If Notification Service is down, messages queue up in RabbitMQ and are delivered when it comes back. Payment API responds to user immediately regardless. This is the core resilience pattern — side effects don't block the main flow.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How does WebSocket real-time notification work end to end?</div>
+    <div class="qa-a">1. Notification Service has STOMP WebSocket server at <code>/ws</code>. 2. After RabbitMQ delivers event, <code>SimpMessagingTemplate.convertAndSend("/notification/user/{id}", dto)</code> pushes to topic. 3. React frontend subscribes to this topic using STOMP.js at app startup. 4. Browser receives notification instantly — no polling. Both customer AND salon owner get notified simultaneously from same payment event.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">What is Database-per-Service and why?</div>
+    <div class="qa-a">Each microservice has its own MySQL database. Services never directly query another service's DB. Data sharing happens only via REST (Feign) or events (RabbitMQ). Benefits: independent schema changes, independent deployments, no single DB bottleneck. Tradeoff: no cross-service JOIN queries — you join data in application code using Feign calls and stream processing.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How is the Salon Report generated?</div>
+    <div class="qa-a">No separate analytics service or complex SQL aggregation. Uses Java Streams on Booking data in memory: <code>bookings.stream().mapToDouble(Booking::getTotalPrice).sum()</code> for earnings, <code>.filter(b -> b.getStatus() == CANCELLED).count()</code> for cancellations. Clean, readable, sufficient for this scale. For large scale, you'd push to a proper analytics service via RabbitMQ.</div>
+  </div>
+</section>
+
+</div>
+</div>
+
+<div style="background:#0a0d14;border-top:1px solid rgba(255,255,255,0.06);padding:28px 40px;text-align:center;color:#4a5568;font-size:13px;">
+  Built with Spring Boot · Keycloak · RabbitMQ · WebSocket · React · Razorpay &nbsp;|&nbsp; Microservices Architecture
+</div>
+
+</body>
+</html>
